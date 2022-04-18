@@ -2,6 +2,9 @@ package com.example.demo.link.controller;
 
 import com.example.demo.link.dto.MemberDto;
 import com.example.demo.link.service.MemberService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,6 +26,11 @@ public class TestJpaRestController {
     @Autowired
     MemberService memberService;
 
+    @Operation(summary = "tet summary", description = "test description")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "OK"),
+            @ApiResponse(responseCode = "400", description = "BAD REQUEST")
+    })
     @GetMapping(produces = {MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<List<MemberDto>> getAllMembers(){
         List<MemberDto> member = memberService.findAll();
