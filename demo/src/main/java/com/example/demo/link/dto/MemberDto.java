@@ -27,6 +27,8 @@ public class MemberDto {
     @JoinColumn(name = "team_id")
     private Team team;
 
+    private String testTest;
+
     @Temporal(TemporalType.TIMESTAMP)
     private Date date;
 
