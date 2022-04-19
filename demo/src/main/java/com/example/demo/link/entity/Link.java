@@ -17,7 +17,7 @@ public class Link {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private long userCode;
+    private long linkCode;
 
     //todo add column userId
 
