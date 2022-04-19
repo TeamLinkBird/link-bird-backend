@@ -5,12 +5,14 @@ import org.springframework.data.annotation.LastModifiedDate;
 
 import javax.persistence.*;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
-@Entity
+@Entity(name = "folder")
 public class Folder {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "folder_code")
     private long folderCode;
 
@@ -24,5 +26,8 @@ public class Folder {
 
     @LastModifiedDate
     private LocalDateTime folderUpdateDate;
+
+    @OneToMany(mappedBy = "folder")
+    private List<Link> links = new ArrayList<>();
 
 }
