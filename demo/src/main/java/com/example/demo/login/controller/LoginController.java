@@ -14,7 +14,7 @@ public class LoginController {
     @PostMapping("/login")
     public String makeJwt(){
         JsonObject jo = new JsonObject();
-        jo.addProperty("jwt", JwtUtility.makeJwtToken());
+//        jo.addProperty("jwt", JwtUtility.makeJwtToken());
         return jo.toString();
     }
 

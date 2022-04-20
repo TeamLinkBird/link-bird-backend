@@ -21,12 +21,12 @@ public class LoginFilter implements Filter {
         HttpServletRequest httpRequest = (HttpServletRequest) request;
 
         String authorizationHeader = httpRequest.getHeader(HttpHeaders.AUTHORIZATION);
-        Claims claims = JwtUtility.parseJwtToken(authorizationHeader);
-        String parsedData = (String)claims.get("id");
-        log.info("parsedData : {}",parsedData);
-        if(!parsedData.equals("신동철")){ // 파싱된 값의 id 에 매칭되는 value 가 신동철이 아니라면 종료.
-            return;
-        }
+//        Claims claims = JwtUtility.parseJwtToken(authorizationHeader);
+//        String parsedData = (String)claims.get("id");
+//        log.info("parsedData : {}",parsedData);
+//        if(!parsedData.equals("신동철")){ // 파싱된 값의 id 에 매칭되는 value 가 신동철이 아니라면 종료.
+//            return;
+//        }
 
         chain.doFilter(request, response); // 신동철이란 값이 제대로 나왔따면 진행
     }
