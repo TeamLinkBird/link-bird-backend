@@ -1,16 +1,13 @@
 package com.example.demo.link.entity;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 
 import javax.persistence.*;
 import java.time.LocalDateTime;
 
-@Data
-@AllArgsConstructor
+@Getter
 @NoArgsConstructor
 @Entity(name = "tag")
 public class Tag {
@@ -33,4 +30,10 @@ public class Tag {
 
     @LastModifiedDate
     private LocalDateTime tagUpdateDate;
+
+    @Builder
+    private Tag(int tagOrder, String tagName){
+        this.tagOrder = tagOrder;
+        this.tagName = tagName;
+    }
 }
