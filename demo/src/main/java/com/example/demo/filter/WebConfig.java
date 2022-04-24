@@ -15,7 +15,7 @@ public class WebConfig {
         FilterRegistrationBean<Filter> filterRegistrationBean = new FilterRegistrationBean<>();
         filterRegistrationBean.setFilter(new LoginFilter());
         filterRegistrationBean.setOrder(1);
-        filterRegistrationBean.addUrlPatterns("/setData");
+        filterRegistrationBean.addUrlPatterns("/");
         return filterRegistrationBean;
     }
 

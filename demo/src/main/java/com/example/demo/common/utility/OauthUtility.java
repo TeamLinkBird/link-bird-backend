@@ -70,7 +70,7 @@ public class OauthUtility {
     }
 
     //Social 토큰 갱신 ( refresh Token 유효기간 좀 남아 있으면 refresh Token 은 갱신 안함 )
-    public static HashMap<String,String> renewalToken (String jwtURL,String clientID,String refresh_Token,String client_secret) {
+    public static HashMap<String,String> renewalToken (String jwtURL,String refresh_Token,String clientID,String client_secret) {
         HashMap<String,String> map = new HashMap<>();
 
         try {
@@ -177,7 +177,7 @@ public class OauthUtility {
     }
 
     //Social accessToken 유효기간이 짧은가 검사  ,  짧으면 true , 길면 false
-    public static boolean isTokenTimeShort (String access_Token,String tokeninfoURL,int oauth_accessToken_Time) {
+    public static boolean isAccessTokenTimeShort (String access_Token,String tokeninfoURL,int oauth_accessToken_Time) {
 
         // 요청하는 클라이언트마다 가진 정보가 다를 수 있기에 HashMap타입으로 선언
         HashMap<String, Object> userInfo = new HashMap<>();
