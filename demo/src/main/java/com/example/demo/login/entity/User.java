@@ -1,5 +1,6 @@
 package com.example.demo.login.entity;
 
+import com.example.demo.common.entity.BaseTimeEntity;
 import com.example.demo.link.entity.Link;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -7,6 +8,7 @@ import lombok.NoArgsConstructor;
 import org.apache.ibatis.annotations.Many;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import javax.persistence.*;
 import java.time.LocalDateTime;
@@ -17,7 +19,7 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 @Entity(name = "user")
-public class User {
+public class User extends BaseTimeEntity {
 
     @Id
     private String userId;
@@ -37,12 +39,6 @@ public class User {
     private String userMail;
 
     private String userNm;
-
-    @CreatedDate
-    private LocalDateTime userRegDt;
-
-    @LastModifiedDate
-    private LocalDateTime loginDt;
 
     private String refreshToken;
 
