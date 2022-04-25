@@ -6,6 +6,8 @@ import com.example.demo.common.utility.UrlUtility;
 import com.example.demo.login.entity.User;
 import com.example.demo.login.service.LoginService;
 import com.example.demo.login.service.OauthLoginService;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwt;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -164,9 +166,43 @@ public class LoginController {
         return dataMap;
     }
 
-    /*@GetMapping("/kakaoLogout")
-    public
-*/
+    @GetMapping("/kakaoLogout")
+    public HashMap<String ,String> kakaoLogout(@RequestBody HashMap<String,String> dataMap ,HttpServletRequest request){
+        String userId = dataMap.get("id");
+
+/*
+        로그아웃 url 에서
+        서버 access_Token url의 유효성을 검사하고  ,
+                만료되었다면 로그인 페이지 정보를 전달하고 ,
+        서버 access_Token이 유효하다면 , 서버 access_Token  을 이용하여 다음 케이스를 따른다.*/
+       /* case 1) 비회원 로그아웃
+        사용자로 부터 받은 단말기 ID 를 이용하여
+        DB 로부터 단말기 ID를 검색하여 refresh_Token을 null 로 만든다.
+        case 2)소셜회원 로그아웃
+        서버 access_Token 으로 회원 id를 소셜로부터 받고( 무효하면 갱신 후 수행 )
+        소셜 토큰을 만료시킨 후
+        DB 에서 받은 회원 id의 refresh_Token을 삭제한다.
+                공통 ) 로컬 refresh_Token 만료 시킨 후
+        로그인페이지정보 전달*/
+        String header = request.getHeader("Authorization");
+
+        // 로컬 Access_Token 이 만료 되었을 경우, 로그인 페이지 안내
+        HashMap<String ,String> tokenMap = JwtUtility.getClaimData(header ,jwtsecretKey ,"access_Token","refresh_Token");
+
+        User user = null;
+        if(userId!=null){//단말기 로그인 상태
+        }else{ //소셜 로그인 상태
+            if(OauthUtility.isAccessTokenTimeShort(tokenMap.get("access_Token"),tokeninfoURL,oauth_accessToken_Time)) //소셜 토큰 무효하면 갱신.
+                tokenMap = OauthUtility.renewalToken(jwtURL,tokenMap.get("refresh_Token"), clientID, client_secret);
+            //소셜 토큰을 만료시킨다
+            userId = OauthUtility.doLogout(tokenMap.get("access_Token"), kakaologoutURL).toString() ;
+        }
+        user = loginService.findAByuserId(userId);
+        user.setRefreshToken(null);
+        em.persist(user);
+
+        return UrlUtility.loginUrl(serverURI);
+    }
 
     public void makeMap(HashMap<String,Integer> timeMap,HashMap<String,String> urlMap,HashMap<String,String> secretMap){
         timeMap.put("accessTokenTime",accessTokenTime);

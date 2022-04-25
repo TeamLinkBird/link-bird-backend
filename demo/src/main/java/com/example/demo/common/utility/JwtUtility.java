@@ -139,6 +139,8 @@ public class JwtUtility {
         HashMap<String,String> dataMap = new HashMap<>();
         try {
             Claims claims = parseToken(authorizationHeader, secretKey);
+            if(claims==null)
+                return null;
 
             for (int idx = 0; idx < keys.length; idx++)
                 dataMap.put(keys[idx], (String)claims.get(keys[idx]));
@@ -163,6 +165,7 @@ public class JwtUtility {
         }catch(MalformedJwtException e2){
         }catch(SignatureException e3){
         }catch(ExpiredJwtException e4){
+            return null;
         }catch(IllegalArgumentException e5) {
         }return null;
     }
