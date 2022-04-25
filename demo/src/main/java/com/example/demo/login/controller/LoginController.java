@@ -1,6 +1,7 @@
 package com.example.demo.login.controller;
 
 import com.example.demo.common.utility.JwtUtility;
+import com.example.demo.common.utility.OauthUtility;
 import com.example.demo.common.utility.UrlUtility;
 import com.example.demo.login.entity.User;
 import com.example.demo.login.service.LoginService;
@@ -53,6 +54,9 @@ public class LoginController {
     @Value("${userURL.kakao}")
     String userURL;
 
+    @Value(("${logoutURL.kakao}"))
+    String kakaologoutURL;
+
     @Value("${clientID.kakao}")
     String clientID;
 
@@ -80,7 +84,7 @@ public class LoginController {
     }
 
     @Transactional
-    @PostMapping("/unsignedLogin")
+    @GetMapping("/unsignedLogin")
     public HashMap<String, String> unsignedLogin(@RequestBody HashMap<String,String> idMap){
         //일단 클라이언트에서 보낸 서버토큰은 확실히 없다.
 
@@ -122,18 +126,47 @@ public class LoginController {
         return dataMap;
     }
 
-    @PostMapping("/kakaoLogin")
-    public HashMap<String, String> kakaoLogin(){
+    @Transactional
+    @GetMapping("/kakaoLogin")
+    public HashMap<String, String> kakaoLogin(HttpServletRequest request){
         //일단 클라이언트에서 보낸 서버토큰은 확실히 없다.
 
         // Oauth 의 토큰생성 절차를 거치고 , 토큰생성후
-        // 로컬 토큰에 소셜 토큰을 담고 ,
+        // 로컬 토큰에 소셜 토큰을 담고,
         // 소셜 access_Token을 이용하여 사용자 회원아이디를 받아온다.
-        // 받아온 사용자 회원아이디를 db에서 확인하여
+        // 받아온 사용자 회원아이디를 db에서 확인하여 , , db에 로컬 refresh_Token을 담는다.
+        HashMap<String ,String> token = new HashMap<>();
+        HashMap<String ,String> dataMap = null;
+        HashMap<String ,Object> userinfo = new HashMap<>();
+        String userId = null;
+        User user = null;
+
+        String authorize_code = request.getParameter("code");
+        token = OauthUtility.getToken(authorize_code, jwtURL, clientID, request.getRequestURL().toString(), client_secret);
+        userinfo = OauthUtility.getUserInfo(token.get("access_Token"),userURL);
+        log.info("kakao id : {}",userinfo);
+        userId = ((Long)userinfo.get("id")).toString();
+        user = loginService.findAByuserId(userId);
+        token = JwtUtility.makeToken(accessTokenTime ,refreshTokenTime ,token ,jwtsecretKey);
+        dataMap = token;
+
         // CASE 1) DB 에 회원 아이디가 있다면 , 회원 아이디에 대한 메인페이지 정보와 로컬 토큰을 사용자에게 반환한다.
         // CASE 2) DB 에 회원 아이디가 없다면 , 회원 아이디를 등록하고 ,  메인페이지 정보와 로컬 토큰을 사용자에게 반환한다.
-        return null;
+        if(user==null){
+            log.info("새롭게 등록");
+            user = new User();
+            user.setUserId(userId);
+        }
+        user.setRefreshToken(token.get("refresh_Token"));
+        em.persist(user);
+        dataMap.put("state","main");
+        dataMap.put("link","1");
+        return dataMap;
     }
+
+    /*@GetMapping("/kakaoLogout")
+    public
+*/
 
     public void makeMap(HashMap<String,Integer> timeMap,HashMap<String,String> urlMap,HashMap<String,String> secretMap){
         timeMap.put("accessTokenTime",accessTokenTime);
