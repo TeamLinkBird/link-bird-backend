@@ -1,5 +1,7 @@
 package com.example.demo.login.service;
 
+import com.example.demo.common.utility.JwtUtility;
+import com.example.demo.common.utility.OauthUtility;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -17,215 +19,45 @@ import java.util.HashMap;
 @Slf4j
 public class OauthLoginService {
 
-    //Social 토큰 획득
-    public static HashMap<String,String> getToken (String authorize_code,String jwtURL,String clientID,String redirectURI,String client_secret) {
-        HashMap<String,String> map = new HashMap<>();
+    public static HashMap<String ,String> checkSocialLogin
+            (HashMap<String,String> socialTokenMap , HashMap<String,Integer> timeMap ,
+             HashMap<String,String> urlMap , HashMap<String,String> secretMap) {
 
-        try {
+        int oauth_accessToken_Time = timeMap.get("oauth_accessToken_Time");
+        int  accessTokenTime = timeMap.get("accessTokenTime");
+        int refreshTokenTime = timeMap.get("refreshTokenTime");
+        String tokeninfoURL =  urlMap.get("tokeninfoURL");
+        String jwtURL = urlMap.get("jwtURL");
+        String userURL = urlMap.get("userURL");
+        String clientID = secretMap.get("clientID");
+        String client_secret = secretMap.get("client_secret");
+        String secretKey = secretMap.get("jwtsecretKey");
 
-            //서버로 accesstoken 요청
-            URL url = new URL(jwtURL);
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        HashMap<String ,String> newSocialToken;
+        HashMap<String ,String> newLocalToken;
+        HashMap<String ,String> dataMap = new HashMap<>();
 
-            //    POST 요청을 위해 기본값이 false인 setDoOutput을 true로
-            conn.setRequestMethod("POST");
-            conn.setDoOutput(true);
-
-            //    POST 요청에 필요로 요구하는 파라미터 스트림을 통해 전송
-            BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(conn.getOutputStream()));
-            StringBuilder sb = new StringBuilder();
-            sb.append("grant_type=authorization_code");
-            sb.append("&client_id="+clientID);  // fixed app id
-            sb.append("&redirect_uri="+redirectURI);    // redirect_uri
-            sb.append("&code=" + authorize_code);
-            sb.append("&client_secret=" + client_secret);
-            bw.write(sb.toString());
-            bw.flush();
-
-            //    결과 코드가 200이라면 성공
-            int responseCode = conn.getResponseCode();
-            log.info("responseCode : {}",responseCode);
-
-            //    요청을 통해 얻은 JSON타입의 Response 메세지 읽어오기
-            BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-            String line = "";
-            String result = "";
-
-            while ((line = br.readLine()) != null) {
-                result += line;
-            }
-            log.info("response body : {}",result);
-
-            //    Gson 라이브러리에 포함된 클래스로 JSON파싱 객체 생성
-            JsonParser parser = new JsonParser();
-            JsonElement element = parser.parse(result);
-
-            map.put("access_Token",element.getAsJsonObject().get("access_token").getAsString());
-            map.put("refresh_Token",element.getAsJsonObject().get("refresh_token").getAsString());
-
-            br.close();
-            bw.close();
-        } catch (IOException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
+        Boolean isExpired = OauthUtility.isAccessTokenTimeShort (socialTokenMap.get("access_Token") ,tokeninfoURL ,oauth_accessToken_Time); //accessToken 만료여부 검사
+        if(isExpired) { //소셜 Access_Token 만료 됨
+            newSocialToken = OauthUtility.renewalToken(jwtURL, socialTokenMap.get("refresh_Token"), clientID, client_secret);
+            //소셜토큰이 만료되어서 .. 소셜 토큰을 갱신 하고 , 다시 로컬 토큰에 소셜토큰을 담고 ,
+            // 소셜 토큰 정보를 통해 사용자의 id 를 뽑고 , 사용자에게 로컬토큰과 메인페이지 정보를 같이 전달 해주면 끝
+            newLocalToken = JwtUtility.makeToken(accessTokenTime, refreshTokenTime, newSocialToken, secretKey);
+            //사용자의 id 를 뽑고
+            Object id = OauthUtility.getUserInfo(newSocialToken.get("access_Token"),userURL).get("id");
+            //사용자의 id 에 대한 정보들을 뽑은 다음에 .. 일단 임시로 "1"
+            dataMap.put("state","main");
+            dataMap.put("link","1");
+            dataMap.put("access_Token",newLocalToken.get("access_Token"));
+            dataMap.put("refresh_Token",newLocalToken.get("refresh_Token"));
         }
-
-        return map;
-    }
-
-    //Social 토큰 갱신 ( refresh Token 유효기간 좀 남아 있으면 refresh Token 은 갱신 안함 )
-    public static HashMap<String,String> renewalToken (String jwtURL,String clientID,String refresh_Token,String client_secret) {
-        HashMap<String,String> map = new HashMap<>();
-
-        try {
-
-            //서버로 accesstoken 요청
-            URL url = new URL(jwtURL);
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-
-            //POST 요청을 위해 기본값이 false인 setDoOutput을 true로
-            conn.setRequestMethod("POST");
-            conn.setDoOutput(true);
-
-            //POST 요청에 필요로 요구하는 파라미터 스트림을 통해 전송
-            BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(conn.getOutputStream()));
-            StringBuilder sb = new StringBuilder();
-            sb.append("grant_type=refresh_token");
-            sb.append("&client_id="+clientID);  // fixed app id
-            sb.append("&refresh_token="+refresh_Token);
-            sb.append("&client_secret="+client_secret);
-
-            bw.write(sb.toString());
-            bw.flush();
-
-            //    결과 코드가 200이라면 성공
-            int responseCode = conn.getResponseCode();
-            log.info("responseCode : {}",responseCode);
-
-            //    요청을 통해 얻은 JSON타입의 Response 메세지 읽어오기
-            BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-            String line = "";
-            String result = "";
-
-            while ((line = br.readLine()) != null) {
-                result += line;
-            }
-            log.info("response body : {}",result);
-
-            //    Gson 라이브러리에 포함된 클래스로 JSON파싱 객체 생성
-            JsonParser parser = new JsonParser();
-            JsonElement element = parser.parse(result);
-
-            //refresh 토큰 갱신 안되면 null 반환 ( 1개월 이상 남으면 노갱신 )
-            JsonElement tmp = element.getAsJsonObject().get("refresh_token");
-            refresh_Token = ( tmp==null ) ? refresh_Token : tmp.getAsString();
-
-
-            map.put("access_Token",element.getAsJsonObject().get("access_token").getAsString());
-            map.put("refresh_Token",refresh_Token);
-
-            br.close();
-            bw.close();
-        } catch (IOException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
+        else{//소셜 Access_Token 만료 안됨
+            //소셜 Acces_Token 으로 부터 사용자 id 를 뽑고 ,  id 에 해당하는 사용자에게 메인 페이지 정보를 전달해주면 끝.
+            Object id = OauthUtility.getUserInfo(socialTokenMap.get("access_Token"),userURL).get("id");
+            //사용자의 id 에 대한 정보들을 뽑은 다음에 .. 일단 임시로 "1"
+            dataMap.put("state","main");
+            dataMap.put("link","1");
         }
-
-        return map;
+        return dataMap;
     }
-
-    //Social 유저 정보를 얻어옴
-    public static HashMap<String, Object> getUserInfo (String access_Token,String userURL) {
-
-        // 요청하는 클라이언트마다 가진 정보가 다를 수 있기에 HashMap타입으로 선언
-        HashMap<String, Object> userInfo = new HashMap<>();
-        try {
-            URL url = new URL(userURL);
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("POST");
-
-            //    요청에 필요한 Header에 포함될 내용
-            conn.setRequestProperty("Authorization", "Bearer " + access_Token);
-
-            int responseCode = conn.getResponseCode();
-            log.info("responseCode : {}",responseCode);
-
-            BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-
-            String line = "";
-            String result = "";
-
-            while ((line = br.readLine()) != null) {
-                result += line;
-            }
-            log.info("response body : {}" , result);
-
-            JsonParser parser = new JsonParser();
-            JsonElement element = parser.parse(result);
-
-            Long id = element.getAsJsonObject().get("id").getAsLong();
-            JsonObject properties = element.getAsJsonObject().get("properties").getAsJsonObject();
-
-            //받아오는 정보들
-            String nickname = properties.getAsJsonObject().get("nickname").getAsString();
-
-            userInfo.put("nickname", nickname);
-            userInfo.put("id", id);
-
-        } catch (IOException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
-
-        return userInfo;
-    }
-
-    //Social accessToken 유효기간이 짧은가 검사  ,  짧으면 true , 길면 false
-    public static boolean isTokenTimeShort (String access_Token,String tokeninfoURL,int oauth_accessToken_Time) {
-
-        // 요청하는 클라이언트마다 가진 정보가 다를 수 있기에 HashMap타입으로 선언
-        HashMap<String, Object> userInfo = new HashMap<>();
-        boolean isRenewal = false;
-        try {
-            URL url = new URL(tokeninfoURL);
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("GET");
-
-            //    요청에 필요한 Header에 포함될 내용
-            conn.setRequestProperty("Authorization", "Bearer " + access_Token);
-
-            int responseCode = conn.getResponseCode();
-            log.info("responseCode : {}",responseCode);
-
-            BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-
-            String line = "";
-            String result = "";
-
-            while ((line = br.readLine()) != null) {
-                result += line;
-            }
-            log.info("response body : {}" , result);
-
-            JsonParser parser = new JsonParser();
-            JsonElement element = parser.parse(result);
-
-            Long expires_in = element.getAsJsonObject().get("expires_in").getAsLong();
-            log.info("oauth_accessToken_Time : {}",oauth_accessToken_Time);
-            log.info("expires_in : {}",expires_in);
-
-             isRenewal = ( expires_in <= oauth_accessToken_Time ) ? true : false; //true : 만료시간이 1시간도 안남아서 갱신해야 한다는 의미
-
-        } catch (IOException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
-        return isRenewal;
-    }
-
-    //db 에 회원 아이디 저장
-    
-    //Logout
-
-    //비회원을 회원으로 전환
 }

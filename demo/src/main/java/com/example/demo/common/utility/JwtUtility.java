@@ -10,7 +10,7 @@ import java.util.HashMap;
 @Slf4j
 public class JwtUtility {
 
-    //로컬 토큰 생성후 반환
+    //로컬 종합 토큰 생성후 반환
     //input : 로컬 access,refresh Token 유효시간, dataMap(id or id,소셜 access_Token,소셜 refresh_Token), jwt암호화 할 시크릿 키
     //output : tokenMap
     public static HashMap<String,String> makeToken(
@@ -84,7 +84,7 @@ public class JwtUtility {
 
 
     //로컬 access 토큰 검증   true: 유효 , false : 만료       , 만료 , 유효 뿐만 아니라 기타의 경우도 고려하긴 해야함 , 그리고 만료된것의 여부는 1시간 남았을 경우로 변경해야함
-    private boolean isValidAccessToken(String jwtsecretKey,String access_Token){
+    public static Boolean isValidAccessToken(String jwtsecretKey,String access_Token){
         String tokenState = "expired";
         try {
             Date date = Jwts.parser()
@@ -92,10 +92,15 @@ public class JwtUtility {
                     .parseClaimsJws(access_Token)
                     .getBody()
                     .getExpiration();
-        }catch(ExpiredJwtException e){
+        }catch(UnsupportedJwtException e){
+        }catch(MalformedJwtException e2) {
+        }catch(SignatureException e3){
+        }catch(ExpiredJwtException e4){
             log.info("만료된 토큰입니다");
             return false;
+        }catch(IllegalArgumentException e5){
         }
+
         return true;
     }
 
@@ -129,45 +134,54 @@ public class JwtUtility {
     }
 
     // authorizationHeader 로부터 HashMap 데이터 획득
-    public static HashMap<String,Object> getClaimData(String authorizationHeader ,String secretKey ,String... keys) {
+    public static HashMap<String,String> getClaimData(String authorizationHeader ,String secretKey ,String... keys) {
 
-        HashMap<String,Object> dataMap = new HashMap<>();
+        HashMap<String,String> dataMap = new HashMap<>();
         try {
             Claims claims = parseToken(authorizationHeader, secretKey);
+            if(claims==null)
+                return null;
 
             for (int idx = 0; idx < keys.length; idx++)
-                dataMap.put(keys[idx], claims.get(keys[idx]));
-        }catch(ExpiredJwtException e1){
-            e1.printStackTrace();
-            log.info("expired Token 입니다.");
-            dataMap.put("state","expired");
-        }catch(Exception e2){
-            log.warn("토큰으로 부터 데이터 획득에 오류 발생");
-            dataMap.put("state","invalid");
+                dataMap.put(keys[idx], (String)claims.get(keys[idx]));
+        }catch(ClassCastException e1){
+        }catch(NullPointerException e2){
+        }catch(Exception e3){
         }
+
         return dataMap;
     }
 
-    private static Claims parseToken(String authorizationHeader,String secretKey) throws ExpiredJwtException {
-        validationAuthorizationHeader(authorizationHeader); // (1)
-        String token = extractAccessToken(authorizationHeader); // (2)
+    public static Claims parseToken(String authorizationHeader,String secretKey) {
+        try {
+            validationAuthorizationHeader(authorizationHeader); // (1)
+            String token = extractAccessToken(authorizationHeader); // (2)
 
-        Jwts.parser()
-                .setSigningKey(secretKey) // (3)
-                .parseClaimsJws(token) // (4)
-                .getBody()
-                .getSubject();
-        return null;
+            return Jwts.parser()
+                    .setSigningKey(secretKey)
+                    .parseClaimsJws(token)
+                    .getBody();
+        }catch(UnsupportedJwtException e1){
+        }catch(MalformedJwtException e2){
+        }catch(SignatureException e3){
+        }catch(ExpiredJwtException e4){
+            return null;
+        }catch(IllegalArgumentException e5) {
+        }return null;
     }
 
-    private static void validationAuthorizationHeader(String header) {
+    public static void validationAuthorizationHeader(String header) {
         if (header == null || !header.startsWith("Bearer ")) {
             throw new IllegalArgumentException();
         }
     }
 
-    private static String extractAccessToken(String authorizationHeader) {
-        return authorizationHeader.substring("Bearer ".length());
+    public static String extractAccessToken(String authorizationHeader) {
+        try {
+            return authorizationHeader.substring("Bearer ".length());
+        }catch(IndexOutOfBoundsException e1){
+        }catch(NullPointerException e2){
+        }
+        return null;
     }
-
 }
