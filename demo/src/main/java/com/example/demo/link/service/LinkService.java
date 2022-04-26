@@ -1,5 +1,6 @@
 package com.example.demo.link.service;
 
+import com.example.demo.common.LinkCrawler;
 import com.example.demo.link.dto.LinkDto;
 import com.example.demo.link.entity.Link;
 import com.example.demo.link.repository.FolderRepo;
@@ -17,6 +18,7 @@ public class LinkService {
 
     private final LinkRepo linkRepo;
     private final FolderRepo folderRepo;
+    private final LinkCrawler linkCrawler;
 
 
     public List<LinkDto> findAll() {
@@ -49,6 +51,7 @@ public class LinkService {
                     .url(linkDto.getUrl())
                     .memo(linkDto.getMemo())
                     .isRead(linkDto.isRead())
+                    .title(linkCrawler.getTitle(linkDto.getUrl()))
                     .build()
         );
         return linkDto;
