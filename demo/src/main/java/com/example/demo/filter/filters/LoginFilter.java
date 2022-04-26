@@ -1,7 +1,6 @@
 package com.example.demo.filter.filters;
 
 import com.example.demo.common.utility.JwtUtility;
-import io.jsonwebtoken.Claims;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 

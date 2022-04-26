@@ -19,7 +19,7 @@ import java.util.HashMap;
 @Slf4j
 public class OauthLoginService {
 
-    public static HashMap<String ,String> checkSocialToken
+    public static HashMap<String ,String> checkSocialLogin
             (HashMap<String,String> socialTokenMap , HashMap<String,Integer> timeMap ,
              HashMap<String,String> urlMap , HashMap<String,String> secretMap) {
 

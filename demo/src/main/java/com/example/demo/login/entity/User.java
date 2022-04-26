@@ -1,5 +1,11 @@
 package com.example.demo.login.entity;
 
+import com.example.demo.common.commonenum.Auth;
+import com.example.demo.common.commonenum.Social;
+import com.example.demo.common.commonenum.UserStatus;
+import com.example.demo.common.commonenum.convertor.AuthConverter;
+import com.example.demo.common.commonenum.convertor.SocialConverter;
+import com.example.demo.common.commonenum.convertor.UserStatusConverter;
 import com.example.demo.common.entity.BaseTimeEntity;
 import com.example.demo.link.entity.Link;
 import lombok.AllArgsConstructor;
@@ -24,17 +30,15 @@ public class User extends BaseTimeEntity {
     @Id
     private String userId;
 
-/*    @ManyToOne
-    @JoinColumn(name="AUTH_CD")
+
+    @Convert(converter = AuthConverter.class)
     private Auth auth;
 
-    @OneToOne
-    @JoinColumn(name="SOCIAL_CD")
+    @Convert(converter = SocialConverter.class)
     private Social social;
 
-    @ManyToOne
-    @JoinColumn(name="USERSTATUS_CD")
-    private Userstatus userStatus;*/
+    @Convert(converter = UserStatusConverter.class)
+    private UserStatus userStatus;
 
     private String userMail;
 

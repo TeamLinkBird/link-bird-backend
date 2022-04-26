@@ -1,13 +1,14 @@
 package com.example.demo.login.controller;
 
+import com.example.demo.common.commonenum.Auth;
+import com.example.demo.common.commonenum.Social;
+import com.example.demo.common.commonenum.UserStatus;
 import com.example.demo.common.utility.JwtUtility;
 import com.example.demo.common.utility.OauthUtility;
 import com.example.demo.common.utility.UrlUtility;
 import com.example.demo.login.entity.User;
 import com.example.demo.login.service.LoginService;
 import com.example.demo.login.service.OauthLoginService;
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jwt;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -76,8 +77,11 @@ public class LoginController {
         HashMap<String,String> secretMap = new HashMap<>();
         makeMap(timeMap,urlMap,secretMap);
 
-        HashMap<String,String> socialTokenMap = LoginService.checkLocalToken(request,jwtsecretKey);
-        return OauthLoginService.checkSocialToken(socialTokenMap ,timeMap ,urlMap ,secretMap);
+        HashMap<String,String> dataMap = LoginService.checkLocalToken(request,jwtsecretKey);
+        if(dataMap.get("id")==null) //소셜 접속
+            return OauthLoginService.checkSocialLogin(dataMap ,timeMap ,urlMap ,secretMap);
+        else // 비회원 접속
+            return loginService.checkLogin(dataMap, JwtUtility.extractAccessToken(request.getHeader("Authorization")));
     }
 
     @GetMapping("/login")
@@ -120,6 +124,9 @@ public class LoginController {
             log.info("DB 에 단말기 정보 존재 X : {}",userId);
             user = new User();
             user.setUserId(userId);
+            user.setAuth(Auth.비회원);
+            user.setSocial(Social.없음);
+            user.setUserStatus(UserStatus.활성화);
             user.setRefreshToken(dataMap.get("refresh_Token"));
             dataMap.put("link","1");
         }
@@ -158,6 +165,9 @@ public class LoginController {
             log.info("새롭게 등록");
             user = new User();
             user.setUserId(userId);
+            user.setAuth(Auth.소셜회원);
+            user.setSocial(Social.카카오);
+            user.setUserStatus(UserStatus.활성화);
         }
         user.setRefreshToken(token.get("refresh_Token"));
         em.persist(user);
@@ -166,9 +176,9 @@ public class LoginController {
         return dataMap;
     }
 
-    @GetMapping("/kakaoLogout")
+    @Transactional
+    @PostMapping("/kakaoLogout")
     public HashMap<String ,String> kakaoLogout(@RequestBody HashMap<String,String> dataMap ,HttpServletRequest request){
-        String userId = dataMap.get("id");
 
 /*
         로그아웃 url 에서
@@ -187,7 +197,8 @@ public class LoginController {
         String header = request.getHeader("Authorization");
 
         // 로컬 Access_Token 이 만료 되었을 경우, 로그인 페이지 안내
-        HashMap<String ,String> tokenMap = JwtUtility.getClaimData(header ,jwtsecretKey ,"access_Token","refresh_Token");
+        HashMap<String ,String> tokenMap = JwtUtility.getClaimData(header ,jwtsecretKey ,"access_Token","refresh_Token","id");
+        String userId = tokenMap.get("id"); // 단말기 id 가져옴
 
         User user = null;
         if(userId!=null){//단말기 로그인 상태
