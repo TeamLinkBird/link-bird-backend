@@ -1,0 +1,40 @@
+package com.example.demo.link.controller;
+
+import com.example.demo.link.dto.TagDto;
+import com.example.demo.link.service.TagService;
+import io.swagger.v3.oas.annotations.Operation;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/tags")
+@RequiredArgsConstructor
+public class TagController {
+
+    private final TagService tagService;
+
+    @Operation(summary = "Get All Tags", description = "모든 태그를 검색합니다.")
+    @GetMapping(produces = {MediaType.APPLICATION_JSON_VALUE})
+    public ResponseEntity<List<TagDto>> getAllTags(){
+        List<TagDto> tags = tagService.findAll();
+        return new ResponseEntity<List<TagDto>>(tags, HttpStatus.OK);
+    }
+
+    @Operation(summary = "Get Tag", description = "태그를 검색합니다.")
+    @GetMapping(value = "/{tagCode}", produces = {MediaType.APPLICATION_JSON_VALUE})
+    public ResponseEntity<TagDto> getTag(@PathVariable("tagCode") Long tagCode){
+        return new ResponseEntity<TagDto>(tagService.findByTagCode(tagCode),HttpStatus.OK);
+    }
+
+    @Operation(summary = "Delete Tag", description = "태그를 제거합니다.")
+    @DeleteMapping(value = "/{tagCode}", produces = {MediaType.APPLICATION_JSON_VALUE})
+    public ResponseEntity<Void> deleteTag(@PathVariable("tagCode")Long tagCode){
+        tagService.deleteByTagCode(tagCode);
+        return new ResponseEntity<Void>(HttpStatus.OK);
+    }
+}

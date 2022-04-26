@@ -1,8 +1,6 @@
 package com.example.demo.link.entity;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 
@@ -11,8 +9,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-@Data
-@AllArgsConstructor
+@Getter
 @NoArgsConstructor
 @Entity(name = "folder")
 public class Folder {
@@ -35,5 +32,12 @@ public class Folder {
 
     @OneToMany(mappedBy = "folder")
     private List<Link> links = new ArrayList<>();
+
+    @Builder
+    private Folder(long folderCode, int folderOrder, String folderName){
+        this.folderCode = folderCode;
+        this.folderOrder = folderOrder;
+        this.folderName = folderName;
+    }
 
 }

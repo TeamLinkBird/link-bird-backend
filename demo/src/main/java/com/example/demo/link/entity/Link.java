@@ -1,16 +1,13 @@
 package com.example.demo.link.entity;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 
 import javax.persistence.*;
 import java.time.LocalDateTime;
 
-@Data
-@AllArgsConstructor
+@Getter
 @NoArgsConstructor
 @Entity(name = "link")
 public class Link {
@@ -40,5 +37,16 @@ public class Link {
 
     @LastModifiedDate
     private LocalDateTime linkUpdateDate;
+
+    @Builder
+    private Link(Folder folder, int linkOrder, String url, String title, String memo
+    , boolean isRead){
+        this.folder = folder;
+        this.linkOrder = linkOrder;
+        this.url = url;
+        this.title = title;
+        this.memo = memo;
+        this.isRead = isRead;
+    }
 
 }
