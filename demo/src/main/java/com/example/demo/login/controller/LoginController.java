@@ -90,7 +90,7 @@ public class LoginController {
     }
 
     @Transactional
-    @GetMapping("/unsignedLogin")
+    @GetMapping("/login/unsigned")
     public HashMap<String, String> unsignedLogin(@RequestBody HashMap<String,String> idMap){
         //일단 클라이언트에서 보낸 서버토큰은 확실히 없다.
 
@@ -136,7 +136,7 @@ public class LoginController {
     }
 
     @Transactional
-    @GetMapping("/kakaoLogin")
+    @GetMapping("/login/kakao")
     public HashMap<String, String> kakaoLogin(HttpServletRequest request){
         //일단 클라이언트에서 보낸 서버토큰은 확실히 없다.
 
@@ -177,8 +177,10 @@ public class LoginController {
     }
 
     @Transactional
-    @PostMapping("/kakaoLogout")
+    @PostMapping("/logout/kakao")
     public HashMap<String ,String> kakaoLogout(@RequestBody HashMap<String,String> dataMap ,HttpServletRequest request){
+
+
 
 /*
         로그아웃 url 에서

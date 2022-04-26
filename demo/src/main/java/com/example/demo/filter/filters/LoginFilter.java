@@ -13,7 +13,7 @@ import java.io.IOException;
 public class LoginFilter implements Filter {
     @Override
     public void init(FilterConfig filterConfig) throws ServletException {
-        log.info("Jwt 필터 생성");
+        log.info("LoginFilter 생성");
     }
 
     @Override
@@ -32,6 +32,6 @@ public class LoginFilter implements Filter {
 
     @Override
     public void destroy() {
-        log.info("Jwt 필터 종료");
+        log.info("LoginFilter 종료");
     }
 }
