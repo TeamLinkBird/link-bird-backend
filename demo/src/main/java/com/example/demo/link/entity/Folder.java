@@ -1,6 +1,5 @@
 package com.example.demo.link.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
@@ -31,13 +30,14 @@ public class Folder {
     @LastModifiedDate
     private LocalDateTime folderUpdateDate;
 
-    @JsonIgnore
     @OneToMany(mappedBy = "folder")
     private List<Link> links = new ArrayList<>();
 
     @Builder
-    private Folder(int folderOrder, String folderName){
+    private Folder(long folderCode, int folderOrder, String folderName){
+        this.folderCode = folderCode;
         this.folderOrder = folderOrder;
         this.folderName = folderName;
     }
+
 }

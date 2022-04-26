@@ -32,7 +32,8 @@ public class Tag {
     private LocalDateTime tagUpdateDate;
 
     @Builder
-    private Tag(int tagOrder, String tagName){
+    private Tag(Link link, int tagOrder, String tagName){
+        this.link = link;
         this.tagOrder = tagOrder;
         this.tagName = tagName;
     }

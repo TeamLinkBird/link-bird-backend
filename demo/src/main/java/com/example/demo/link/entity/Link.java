@@ -39,9 +39,14 @@ public class Link {
     private LocalDateTime linkUpdateDate;
 
     @Builder
-    private Link(String url, String title, String memo){
+    private Link(Folder folder, int linkOrder, String url, String title, String memo
+    , boolean isRead){
+        this.folder = folder;
+        this.linkOrder = linkOrder;
         this.url = url;
         this.title = title;
         this.memo = memo;
+        this.isRead = isRead;
     }
+
 }

@@ -1,13 +1,10 @@
 package com.example.demo.link.repository;
 
-import com.example.demo.link.entity.Folder;
+import com.example.demo.link.entity.Tag;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
-
 @Repository
-public interface FolderRepo extends JpaRepository<Folder,Long> {
-
+public interface TagRepo extends JpaRepository<Tag,Long> {
 
 }
