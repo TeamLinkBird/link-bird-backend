@@ -20,7 +20,6 @@ public class Folder {
     @Column(name = "folder_code")
     private long folderCode;
 
-    //todo add column user_id
     @ManyToOne
     @JoinColumn(name = "user_id")
     private User user;
@@ -28,6 +27,7 @@ public class Folder {
     private int folderOrder;
     private String folderName;
 
+    // todo 공통데이터 상속받아 사용하기
     @CreatedDate
     private LocalDateTime folderRegisterDate;
 

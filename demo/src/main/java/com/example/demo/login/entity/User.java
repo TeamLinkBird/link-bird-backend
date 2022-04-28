@@ -9,6 +9,7 @@ import com.example.demo.common.commonenum.convertor.UserStatusConverter;
 import com.example.demo.common.entity.BaseTimeEntity;
 import com.example.demo.link.entity.Folder;
 import com.example.demo.link.entity.Link;
+import com.example.demo.link.entity.Tag;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -49,5 +50,11 @@ public class User extends BaseTimeEntity {
 
     @OneToMany(mappedBy = "user")
     private List<Folder> folders;
+
+    @OneToMany(mappedBy = "user")
+    private List<Link> link;
+
+    @OneToMany(mappedBy = "user")
+    private List<Tag> tags;
 
 }

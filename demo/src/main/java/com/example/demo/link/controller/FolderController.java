@@ -22,20 +22,12 @@ import java.util.Optional;
 public class FolderController {
 
     private final FolderService folderService;
-//    private final baseFilter baseFilter;
-
-    @Value("${jwtsecretKey}")
-    private String jwtSecretKey;
-
-    @Value("${userURL.kakao}")
-    private String userURL;
 
     @Operation(summary = "Get All Folders", description = "모든 폴더를 조회합니다.")
     @GetMapping(produces = {MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<List<FolderDto>> getAllFolders(HttpServletRequest request){
-//        String userId = com.example.demo.filter.filters.baseFilter.getId(request, jwtSecretKey, userURL);
-        String userId = "1";
-        System.out.println(userId);
+        String userId = (String)request.getAttribute("id");
+        //todo userId null일경우 exception 처리하기
         List<FolderDto> folders = folderService.findAll(userId);
         return new ResponseEntity<List<FolderDto>>(folders, HttpStatus.OK);
     }

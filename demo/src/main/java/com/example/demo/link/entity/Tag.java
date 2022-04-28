@@ -1,5 +1,6 @@
 package com.example.demo.link.entity;
 
+import com.example.demo.login.entity.User;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
@@ -16,7 +17,9 @@ public class Tag {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long tagCode;
 
-    //todo add column userId
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+    private User user;
 
     @ManyToOne
     @JoinColumn(name = "link_code")
@@ -32,7 +35,8 @@ public class Tag {
     private LocalDateTime tagUpdateDate;
 
     @Builder
-    private Tag(Link link, int tagOrder, String tagName){
+    private Tag(User user, Link link, int tagOrder, String tagName){
+        this.user = user;
         this.link = link;
         this.tagOrder = tagOrder;
         this.tagName = tagName;
