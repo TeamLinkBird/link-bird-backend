@@ -1,5 +1,6 @@
 package com.example.demo.link.entity;
 
+import com.example.demo.login.entity.User;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
@@ -20,6 +21,9 @@ public class Folder {
     private long folderCode;
 
     //todo add column user_id
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+    private User user;
 
     private int folderOrder;
     private String folderName;
@@ -34,7 +38,8 @@ public class Folder {
     private List<Link> links = new ArrayList<>();
 
     @Builder
-    private Folder(long folderCode, int folderOrder, String folderName){
+    private Folder(User user, long folderCode, int folderOrder, String folderName){
+        this.user = user;
         this.folderCode = folderCode;
         this.folderOrder = folderOrder;
         this.folderName = folderName;

@@ -1,14 +1,17 @@
 package com.example.demo.link.controller;
 
+import com.example.demo.filter.filters.baseFilter;
 import com.example.demo.link.dto.FolderDto;
 import com.example.demo.link.service.FolderService;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.swing.text.html.Option;
 import java.util.List;
 import java.util.Optional;
@@ -19,11 +22,21 @@ import java.util.Optional;
 public class FolderController {
 
     private final FolderService folderService;
+//    private final baseFilter baseFilter;
+
+    @Value("${jwtsecretKey}")
+    private String jwtSecretKey;
+
+    @Value("${userURL.kakao}")
+    private String userURL;
 
     @Operation(summary = "Get All Folders", description = "모든 폴더를 조회합니다.")
     @GetMapping(produces = {MediaType.APPLICATION_JSON_VALUE})
-    public ResponseEntity<List<FolderDto>> getAllFolders(){
-        List<FolderDto> folders = folderService.findAll();
+    public ResponseEntity<List<FolderDto>> getAllFolders(HttpServletRequest request){
+//        String userId = com.example.demo.filter.filters.baseFilter.getId(request, jwtSecretKey, userURL);
+        String userId = "1";
+        System.out.println(userId);
+        List<FolderDto> folders = folderService.findAll(userId);
         return new ResponseEntity<List<FolderDto>>(folders, HttpStatus.OK);
     }
 

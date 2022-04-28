@@ -7,6 +7,7 @@ import com.example.demo.common.commonenum.convertor.AuthConverter;
 import com.example.demo.common.commonenum.convertor.SocialConverter;
 import com.example.demo.common.commonenum.convertor.UserStatusConverter;
 import com.example.demo.common.entity.BaseTimeEntity;
+import com.example.demo.link.entity.Folder;
 import com.example.demo.link.entity.Link;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -45,5 +46,8 @@ public class User extends BaseTimeEntity {
     private String userNm;
 
     private String refreshToken;
+
+    @OneToMany(mappedBy = "user")
+    private List<Folder> folders;
 
 }

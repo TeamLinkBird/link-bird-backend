@@ -7,6 +7,7 @@ import java.util.List;
 
 @Getter
 public class FolderDto {
+    private String userId;
     private Long code;
     private int order;
     private String name;
@@ -14,7 +15,8 @@ public class FolderDto {
 
 
     @Builder
-    private FolderDto(Long code, String name,List<LinkDto> list) {
+    private FolderDto(String userId, Long code, String name,List<LinkDto> list) {
+        this.userId = userId;
         this.code = code;
         this.list = list;
         this.name = name;
