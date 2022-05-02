@@ -7,19 +7,15 @@ import com.example.demo.common.commonenum.convertor.AuthConverter;
 import com.example.demo.common.commonenum.convertor.SocialConverter;
 import com.example.demo.common.commonenum.convertor.UserStatusConverter;
 import com.example.demo.common.entity.BaseTimeEntity;
-import com.example.demo.link.entity.Link;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.apache.ibatis.annotations.Many;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import org.springframework.lang.Nullable;
 
-import javax.persistence.*;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
+import javax.persistence.Column;
+import javax.persistence.Convert;
+import javax.persistence.Entity;
+import javax.persistence.Id;
 
 @Data
 @AllArgsConstructor
@@ -44,6 +40,10 @@ public class User extends BaseTimeEntity {
 
     private String userNm;
 
+    @Column(unique = true)
     private String refreshToken;
 
+    private String socialAccessToken;
+
+    private String socialRefreshToken;
 }

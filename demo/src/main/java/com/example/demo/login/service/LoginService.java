@@ -30,4 +30,8 @@ public class LoginService {
         return user;
     }
 
+    public User findByRefreshToken(String refresh_Token){
+        User user = loginRepo.findByRefreshToken(refresh_Token);
+        return user;
+    }
 }

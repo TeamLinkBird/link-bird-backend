@@ -5,23 +5,22 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 
 import javax.servlet.http.HttpServletRequest;
-import java.time.Duration;
 import java.util.Date;
 import java.util.HashMap;
 
 @Slf4j
 public class JwtUtility {
 
-    public static HashMap<String, String> getSocialToken(HttpServletRequest request, String secretKey) throws Exception{
+    public static HashMap<String, String> getSocialToken(HttpServletRequest request, String secretKey) throws Exception {
         HashMap<String, String> dataMap;
         String authorizationHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
         dataMap = JwtUtility.getClaimData(authorizationHeader, secretKey, "access_Token", "refresh_Token", "id");
         return dataMap;
         //getClaimData 에서
-            //parseToken 에서
-            // IllegalArgumentException , IndexOutOfBoundsException ,  NullPointerException
-            //JWT 예외 UnsupportedJwtException,MalformedJwtException,SignatureException,ExpiredJwtException,IllegalArgumentException,
-            //getClaimData 자체에서
+        //parseToken 에서
+        // IllegalArgumentException , IndexOutOfBoundsException ,  NullPointerException
+        //JWT 예외 UnsupportedJwtException,MalformedJwtException,SignatureException,ExpiredJwtException,IllegalArgumentException,
+        //getClaimData 자체에서
         //NullPointerException
     }
 
@@ -29,7 +28,7 @@ public class JwtUtility {
     //input : 로컬 access,refresh Token 유효시간, dataMap(id or id,소셜 access_Token,소셜 refresh_Token), jwt암호화 할 시크릿 키
     //output : tokenMap
     public static HashMap<String, String> makeToken(
-            int accessTokenTime, int refreshTokenTime, HashMap<String, String> dataMap, String secretKey){
+            Long accessTokenTime, Long refreshTokenTime, HashMap<String, String> dataMap, String secretKey) {
         HashMap<String, String> tokenMap = new HashMap<>();
 
         String access_Token = makeJwtToken(accessTokenTime, dataMap, secretKey);
@@ -44,7 +43,7 @@ public class JwtUtility {
     //로컬 access 토큰 생성후 반환
     // input :   dataMap에 id 만들어오거나  소셜accessToken,소셜refreshToken도 같이 들어오거나 둘 중하나
     // output : 로컬 AccessToken
-    private static String makeJwtToken(int accessTokenTime, HashMap<String, String> dataMap, String secretKey) {
+    private static String makeJwtToken(Long accessTokenTime, HashMap<String, String> dataMap, String secretKey) {
 
         boolean flag = false; // false: 비회원 로그인 인 경우 ( 고유 id만 담김 )
         if (dataMap.get("access_Token") != null)
@@ -54,20 +53,26 @@ public class JwtUtility {
         JwtBuilder jwtBuilder = Jwts.builder()
                 .setHeaderParam(Header.TYPE, Header.JWT_TYPE) // (1)
                 .setSubject("Valid")
-                .setIssuer(dataMap.get("id")) // (2)
+                .setIssuer("team")
                 .setIssuedAt(new Date())
-                .setExpiration(expireTime) // 만료 시간은 properties에 설정
-                .claim("id", dataMap.get("id"));// 비공개 클레임
-        if (flag) // 비공개 클레임으로 소셜 Token 을 담음
+                .setExpiration(expireTime); // 만료 시간은 properties에 설정
+        if (flag) { //소셜 토큰 정보가 있을 경우
             jwtBuilder
                     .claim("access_Token", dataMap.get("access_Token"))// 액세스 토큰
                     .claim("refresh_Token", dataMap.get("refresh_Token")); // 리프레시 토큰
+        }
+        else{   //비회원 로그인일 경우
+            jwtBuilder
+                    .claim("id", dataMap.get("id"));// 비공개 클레임
+
+        }
+
 
         return jwtBuilder.signWith(SignatureAlgorithm.HS256, secretKey).compact(); // 서명부분  deprecated 되어 추후 변경 필요 있다.
     }
 
     //로컬 refresh 토큰 생성후 반환
-    private static String createRefreshToken(int refreshTokenTime, String access_Token) {
+    private static String createRefreshToken(Long refreshTokenTime, String access_Token) {
 
         Date expireTime = new Date(System.currentTimeMillis() + refreshTokenTime);
 
@@ -79,73 +84,88 @@ public class JwtUtility {
                 .setExpiration(expireTime).compact();
     }
 
-    //토큰 갱신 ( refresh Token 유효기간 좀 남아 있으면 refresh Token 은 갱신 안함 )
-    //input : TokenMap(access_Token ,refresh_Token)
-    public HashMap<String, String> renewalToken(int accessTokenTime, int refreshTokenTime,
-                                                String jwtsecretKey, HashMap<String, String> tokenMap, String db_refresh_Token) {
-        String access_Token = tokenMap.get("access_Token");
-        String refresh_Token = tokenMap.get("refresh_Token");
-
-        HashMap<String, String> accessTokenMap = new HashMap<String, String>();
-        accessTokenMap.put("access_Token", makeJwtToken(accessTokenTime, tokenMap, jwtsecretKey));
-
-        //refresh_Token 유효하면 ,  access_Token 만 갱신
-        if (isValidRefreshToken(tokenMap.get("refresh_Token"), db_refresh_Token) && isExpiredRefreshToken(tokenMap))
-            return accessTokenMap;
-        else
-            return makeToken(accessTokenTime, refreshTokenTime, tokenMap, jwtsecretKey); // access_Token ,refresh_Token 갱신
-
-    }
 
 
-    //로컬 access 토큰 검증   true: 유효 , false : 만료       , 만료 , 유효 뿐만 아니라 기타의 경우도 고려하긴 해야함 , 그리고 만료된것의 여부는 1시간 남았을 경우로 변경해야함
-    public static Boolean isValidAccessToken(String jwtsecretKey, String access_Token) {
-        String tokenState = "expired";
-        try {
-            Date date = Jwts.parser()
-                    .setSigningKey(jwtsecretKey)
-                    .parseClaimsJws(access_Token)
-                    .getBody()
-                    .getExpiration();
-        } catch (UnsupportedJwtException e) {
-        } catch (MalformedJwtException e2) {
-        } catch (SignatureException e3) {
-        } catch (ExpiredJwtException e4) {
-            log.info("만료된 토큰입니다");
-            return false;
-        } catch (IllegalArgumentException e5) {
-        }
+
+    //로컬 access 토큰 검증   true: 유효 , false : 만료
+    public static Boolean isValidAccessToken(String jwtsecretKey, String access_Token) throws Exception{
+        Date access_Token_Time = Jwts.parser()
+                .setSigningKey(jwtsecretKey)
+                .parseClaimsJws(access_Token)
+                .getBody()
+                .getExpiration();
 
         return true;
     }
 
     //로컬 refresh 토큰 DB 검증  , 유효하면 true , 무효하면 false
-    private static boolean isValidRefreshToken(String client_refresh_Token, String db_refresh_Token) {
+    public static boolean isValidRefreshToken(String client_refresh_Token, String db_refresh_Token) {
         if (client_refresh_Token == null || db_refresh_Token == null) {
             log.info("client or DB 의 refresh_Token이 존재하지 않습니다.");
+            return false;
         }
-        return db_refresh_Token.equals("client_refresh_Token");
+        return db_refresh_Token.equals(client_refresh_Token);
     }
 
-    //로컬 refresh 만료 검사  , 만료면 true, 유효하면 false
-    //input : tokenMap
-    private static boolean isExpiredRefreshToken(HashMap<String, String> tokenMap) { // 추후에 유효기간으로 변경할 필요 있다
+    //로컬 refresh 만료 검사  , 유효하면 false
+    //input : tokenMap(서버 access_Token , 서버 refresh_Token)
+    public static boolean isExpiredRefreshToken(HashMap<String, String> tokenMap) {
         String access_Token = tokenMap.get("access_Token");
         String refresh_Token = tokenMap.get("refresh_Token");
-
-        String tokenState = "expired";
         try {
-            tokenState = Jwts.parser()
+            Jwts.parser()
                     .setSigningKey(access_Token)
                     .parseClaimsJws(refresh_Token)
                     .getBody()
-                    .getSubject();
-        } catch (ExpiredJwtException e) {
-            log.info("만료된 토큰입니다");
+                    .getExpiration();
+        }catch(ExpiredJwtException e){
+            throw new ExpiredJwtException(null,null,"refresh_Token expired");
         }
 
-        return "expired".equals(tokenState) ? true : false;
+        return false;
+    }
 
+    public static HashMap<String, Date> getTokenExpiration(HashMap<String, String> tokenMap, String jwtsecretKey) {
+        String access_Token = tokenMap.get("access_Token");
+        String refresh_Token = tokenMap.get("refresh_Token");
+
+        HashMap<String, Date> dateMap = new HashMap<>();
+        Date access_Token_Time = null;
+        Date refresh_Token_Time = null;
+
+        access_Token_Time = Jwts.parser()
+                .setSigningKey(jwtsecretKey)
+                .parseClaimsJws(access_Token)
+                .getBody()
+                .getExpiration();
+
+
+        refresh_Token_Time = Jwts.parser()
+                .setSigningKey(access_Token)
+                .parseClaimsJws(refresh_Token)
+                .getBody()
+                .getExpiration();
+
+        Long millis = access_Token_Time.getTime() - System.currentTimeMillis();
+        int second = millis.intValue() / 60;
+        int minute = second / 60;
+        int hour = minute / 60;
+        int day = hour / 24;
+
+        log.info("엑세스 토큰 남은 시간 : {}, 일 : {} ", hour, day);
+
+        millis = refresh_Token_Time.getTime() - System.currentTimeMillis();
+        second = millis.intValue() / 60;
+        minute = second / 60;
+        hour = minute / 60;
+        day = hour / 24;
+
+        log.info("리프레시토큰 토큰 남은 시간 : {}, 일 : {} ", hour, day);
+
+        dateMap.put("access_Token_Time", access_Token_Time);
+        dateMap.put("refresh_Token_Time", refresh_Token_Time);
+
+        return dateMap;
     }
 
     // authorizationHeader 로부터 HashMap 데이터 획득
@@ -192,4 +212,5 @@ public class JwtUtility {
         return authorizationHeader.substring("Bearer ".length());
         //예외 : IndexOutOfBoundsException ,  NullPointerException
     }
+
 }
