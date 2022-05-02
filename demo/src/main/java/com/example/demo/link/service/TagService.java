@@ -3,6 +3,8 @@ package com.example.demo.link.service;
 import com.example.demo.link.dto.TagDto;
 import com.example.demo.link.entity.Tag;
 import com.example.demo.link.repository.TagRepo;
+import com.example.demo.login.entity.User;
+import com.example.demo.login.repository.LoginRepo;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -15,9 +17,11 @@ import java.util.stream.Collectors;
 public class TagService {
 
     private final TagRepo tagRepo;
+    private final LoginRepo loginRepo;
 
-    public List<TagDto> findAll(){
-        List<Tag> tags = tagRepo.findAll();
+    public List<TagDto> findAllByUserId(String userId){
+        User user = loginRepo.findByUserId(userId);
+        List<Tag> tags = tagRepo.findAllByUser(user);
         return tags.stream().map(tag ->
                 TagDto.builder()
                         .tagOrder(tag.getTagOrder())

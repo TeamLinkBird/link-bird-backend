@@ -5,6 +5,8 @@ import com.example.demo.link.dto.LinkDto;
 import com.example.demo.link.entity.Link;
 import com.example.demo.link.repository.FolderRepo;
 import com.example.demo.link.repository.LinkRepo;
+import com.example.demo.login.entity.User;
+import com.example.demo.login.repository.LoginRepo;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -19,10 +21,12 @@ public class LinkService {
     private final LinkRepo linkRepo;
     private final FolderRepo folderRepo;
     private final LinkCrawler linkCrawler;
+    private final LoginRepo loginRepo;
 
 
-    public List<LinkDto> findAll() {
-        List<Link> links = linkRepo.findAll();
+    public List<LinkDto> findAllByUserId(String userId) {
+        User user = loginRepo.findByUserId(userId);
+        List<Link> links = linkRepo.findAllByUser(user);
         return links.stream().map(link ->
                 LinkDto.builder()
                         .url(link.getUrl())

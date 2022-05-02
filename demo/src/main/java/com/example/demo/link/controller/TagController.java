@@ -9,6 +9,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpServletRequest;
 import java.util.List;
 
 @RestController
@@ -18,10 +19,11 @@ public class TagController {
 
     private final TagService tagService;
 
-    @Operation(summary = "Get All Tags", description = "모든 태그를 검색합니다.")
+    @Operation(summary = "Get All Tags", description = "사용자의 모든 태그를 검색합니다.")
     @GetMapping(produces = {MediaType.APPLICATION_JSON_VALUE})
-    public ResponseEntity<List<TagDto>> getAllTags(){
-        List<TagDto> tags = tagService.findAll();
+    public ResponseEntity<List<TagDto>> getAllTags(HttpServletRequest request){
+        String userId = (String) request.getAttribute("id");
+        List<TagDto> tags = tagService.findAllByUserId(userId);
         return new ResponseEntity<List<TagDto>>(tags, HttpStatus.OK);
     }
 

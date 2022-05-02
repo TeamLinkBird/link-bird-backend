@@ -40,8 +40,10 @@ public class FolderService {
                 .collect(Collectors.toList());
     }
 
-    public FolderDto save(FolderDto folderDto){
+    public FolderDto save(FolderDto folderDto, String userId){
+        User user = loginRepo.findByUserId(userId);
         Folder folder = Folder.builder()
+                .user(user)
                 .folderOrder(folderDto.getOrder())
                 .folderName(folderDto.getName())
                 .build();
