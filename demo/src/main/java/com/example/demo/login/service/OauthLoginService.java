@@ -21,7 +21,7 @@ public class OauthLoginService {
 
     public static HashMap<String ,String> checkSocialLogin
             (HashMap<String,String> socialTokenMap , HashMap<String,Integer> timeMap ,
-             HashMap<String,String> urlMap , HashMap<String,String> secretMap) {
+             HashMap<String,String> urlMap , HashMap<String,String> secretMap) throws Exception{
 
         int oauth_accessToken_Time = timeMap.get("oauth_accessToken_Time");
         int  accessTokenTime = timeMap.get("accessTokenTime");
@@ -44,7 +44,7 @@ public class OauthLoginService {
             // 소셜 토큰 정보를 통해 사용자의 id 를 뽑고 , 사용자에게 로컬토큰과 메인페이지 정보를 같이 전달 해주면 끝
             newLocalToken = JwtUtility.makeToken(accessTokenTime, refreshTokenTime, newSocialToken, secretKey);
             //사용자의 id 를 뽑고
-            Object id = OauthUtility.getUserInfo(newSocialToken.get("access_Token"),userURL).get("id");
+            String id = OauthUtility.getUserId(newSocialToken.get("access_Token"),userURL);
             //사용자의 id 에 대한 정보들을 뽑은 다음에 .. 일단 임시로 "1"
             dataMap.put("state","main");
             dataMap.put("link","1");
@@ -53,7 +53,7 @@ public class OauthLoginService {
         }
         else{//소셜 Access_Token 만료 안됨
             //소셜 Acces_Token 으로 부터 사용자 id 를 뽑고 ,  id 에 해당하는 사용자에게 메인 페이지 정보를 전달해주면 끝.
-            Object id = OauthUtility.getUserInfo(socialTokenMap.get("access_Token"),userURL).get("id");
+            String id = OauthUtility.getUserId(socialTokenMap.get("access_Token"),userURL);
             //사용자의 id 에 대한 정보들을 뽑은 다음에 .. 일단 임시로 "1"
             dataMap.put("state","main");
             dataMap.put("link","1");
