@@ -4,6 +4,8 @@ import com.example.demo.link.dto.FolderDto;
 import com.example.demo.link.dto.LinkDto;
 import com.example.demo.link.entity.Folder;
 import com.example.demo.link.repository.FolderRepo;
+import com.example.demo.login.entity.User;
+import com.example.demo.login.repository.LoginRepo;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -20,12 +22,15 @@ import java.util.stream.Collectors;
 public class FolderService {
 
     private final FolderRepo folderRepo;
+    private final LoginRepo loginRepo;
 
-    public List<FolderDto> findAll() {
-        List<Folder> folders = folderRepo.findAll();
+    public List<FolderDto> findAll(String userId) {
+        User user = loginRepo.findByUserId(userId);
+        List<Folder> folders = folderRepo.findAllByUser(user);
         return folders.stream().map(folder ->
                         FolderDto.builder()
                                 .code(folder.getFolderCode())
+                                .userId(folder.getUser().getUserId())
                                 .list(folder.getLinks()
                                         .stream()
                                         .map(link -> LinkDto.builder()
@@ -35,8 +40,10 @@ public class FolderService {
                 .collect(Collectors.toList());
     }
 
-    public FolderDto save(FolderDto folderDto){
+    public FolderDto save(FolderDto folderDto, String userId){
+        User user = loginRepo.findByUserId(userId);
         Folder folder = Folder.builder()
+                .user(user)
                 .folderOrder(folderDto.getOrder())
                 .folderName(folderDto.getName())
                 .build();

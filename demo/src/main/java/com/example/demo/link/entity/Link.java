@@ -1,5 +1,6 @@
 package com.example.demo.link.entity;
 
+import com.example.demo.login.entity.User;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
@@ -16,7 +17,9 @@ public class Link {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long linkCode;
 
-    //todo add column userId
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+    private User user;
 
     @ManyToOne
     @JoinColumn(name = "folder_id")
@@ -39,8 +42,9 @@ public class Link {
     private LocalDateTime linkUpdateDate;
 
     @Builder
-    private Link(Folder folder, int linkOrder, String url, String title, String memo
+    private Link(User user, Folder folder, int linkOrder, String url, String title, String memo
     , boolean isRead){
+        this.user = user;
         this.folder = folder;
         this.linkOrder = linkOrder;
         this.url = url;

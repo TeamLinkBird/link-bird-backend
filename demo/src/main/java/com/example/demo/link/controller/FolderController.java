@@ -4,11 +4,13 @@ import com.example.demo.link.dto.FolderDto;
 import com.example.demo.link.service.FolderService;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.swing.text.html.Option;
 import java.util.List;
 import java.util.Optional;
@@ -20,10 +22,12 @@ public class FolderController {
 
     private final FolderService folderService;
 
-    @Operation(summary = "Get All Folders", description = "모든 폴더를 조회합니다.")
+    @Operation(summary = "Get All Folders", description = "사용자의 모든 폴더를 조회합니다.")
     @GetMapping(produces = {MediaType.APPLICATION_JSON_VALUE})
-    public ResponseEntity<List<FolderDto>> getAllFolders(){
-        List<FolderDto> folders = folderService.findAll();
+    public ResponseEntity<List<FolderDto>> getAllFolders(HttpServletRequest request){
+        String userId = (String)request.getAttribute("id");
+        //todo userId null일경우 exception 처리하기
+        List<FolderDto> folders = folderService.findAll(userId);
         return new ResponseEntity<List<FolderDto>>(folders, HttpStatus.OK);
     }
 
@@ -35,8 +39,9 @@ public class FolderController {
 
     @Operation(summary = "Save Folder", description = "폴더를 저장합니다.")
     @PostMapping(produces = {MediaType.APPLICATION_JSON_VALUE})
-    public ResponseEntity<FolderDto> save(@RequestBody FolderDto folderDto){
-        return new ResponseEntity<FolderDto>(folderService.save(folderDto),HttpStatus.OK);
+    public ResponseEntity<FolderDto> save(HttpServletRequest request, @RequestBody FolderDto folderDto){
+        String userid = (String) request.getAttribute("id");
+        return new ResponseEntity<FolderDto>(folderService.save(folderDto,userid),HttpStatus.OK);
     }
 
     @Operation(summary = "Update Folder", description = "폴더를 수정합니다.")

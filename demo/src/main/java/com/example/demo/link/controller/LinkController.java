@@ -9,6 +9,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpServletRequest;
 import java.util.List;
 
 @RestController
@@ -18,14 +19,15 @@ public class LinkController {
 
     private final LinkService linkService;
 
-    @Operation(summary = "Get All Links", description = "모든 링크를 가져옵니다.")
+    @Operation(summary = "Get All Links", description = "사용자의 모든 링크를 가져옵니다.")
     @GetMapping(produces = {MediaType.APPLICATION_JSON_VALUE})
-    public ResponseEntity<List<LinkDto>> getAllLinks(){
-        List<LinkDto> links = linkService.findAll();
+    public ResponseEntity<List<LinkDto>> getAllLinks(HttpServletRequest request){
+        String userId = (String)request.getAttribute("id");
+        List<LinkDto> links = linkService.findAllByUserId(userId);
         return new ResponseEntity<List<LinkDto>>(links, HttpStatus.OK);
     }
 
-    @Operation(summary = "Get Link", description = "링크를 가져옵니다.")
+    @Operation(summary = "Get Link", description = "링크번호로 링크를 가져옵니다.")
     @GetMapping(value = "/{linkCode}",produces = {MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<LinkDto> getLink(@PathVariable("linkCode")long linkCode){
         return new ResponseEntity<LinkDto>(linkService.findByLinkCode(linkCode),HttpStatus.OK);

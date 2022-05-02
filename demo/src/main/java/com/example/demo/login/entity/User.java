@@ -7,15 +7,18 @@ import com.example.demo.common.commonenum.convertor.AuthConverter;
 import com.example.demo.common.commonenum.convertor.SocialConverter;
 import com.example.demo.common.commonenum.convertor.UserStatusConverter;
 import com.example.demo.common.entity.BaseTimeEntity;
+import com.example.demo.link.entity.Folder;
+import com.example.demo.link.entity.Link;
+import com.example.demo.link.entity.Tag;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.lang.Nullable;
 
-import javax.persistence.Column;
-import javax.persistence.Convert;
-import javax.persistence.Entity;
-import javax.persistence.Id;
+import javax.persistence.*;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Data
 @AllArgsConstructor
@@ -42,6 +45,15 @@ public class User extends BaseTimeEntity {
 
     @Column(unique = true)
     private String refreshToken;
+
+    @OneToMany(mappedBy = "user")
+    private List<Folder> folders;
+
+    @OneToMany(mappedBy = "user")
+    private List<Link> link;
+
+    @OneToMany(mappedBy = "user")
+    private List<Tag> tags;
 
     private String socialAccessToken;
 
