@@ -54,8 +54,4 @@ public class User extends BaseTimeEntity {
 
     @OneToMany(mappedBy = "user")
     private List<Tag> tags;
-
-    private String socialAccessToken;
-
-    private String socialRefreshToken;
 }
