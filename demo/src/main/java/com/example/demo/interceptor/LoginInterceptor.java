@@ -3,13 +3,10 @@ package com.example.demo.interceptor;
 import com.example.demo.common.utility.JwtUtility;
 import com.example.demo.common.utility.OauthUtility;
 import com.example.demo.login.entity.User;
-import com.example.demo.login.exception.LoginException;
 import com.example.demo.login.service.LoginService;
-import com.example.demo.login.service.OauthLoginService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpHeaders;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.HandlerInterceptor;
 
@@ -66,6 +63,9 @@ public class LoginInterceptor implements HandlerInterceptor {
     @Value("forwardsecretKey")
     String forwardsecretKey;
 
+    @Value("refreshTokensecretKey")
+    String refreshTokensecretKey;
+
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         String pw = (String)request.getAttribute("forwardsecretKey");
@@ -91,13 +91,9 @@ public class LoginInterceptor implements HandlerInterceptor {
         String acesss_Token = socialToken.get("acesss_Token");
         if(acesss_Token != null) {
             String refresh_Token = socialToken.get("refresh_Token");
-            String social_access_Token = socialToken.get("social_access_Token");
-            String social_refresh_Token = socialToken.get("social_refresh_Token");
             String id = socialToken.get("id");
-            User user = loginService.findAByuserId(id);
+            User user = loginService.findByuserId(id);
             user.setRefreshToken(refresh_Token);
-            user.setSocialAccessToken(social_access_Token);
-            user.setSocialRefreshToken(social_refresh_Token);
             em.persist(user);
         }
         return socialToken.get("id");
@@ -114,5 +110,6 @@ public class LoginInterceptor implements HandlerInterceptor {
         secretMap.put("clientID", clientID);
         secretMap.put("client_secret", client_secret);
         secretMap.put("jwtsecretKey", jwtsecretKey);
+        secretMap.put("refreshTokensecretKey",refreshTokensecretKey);
     }
 }

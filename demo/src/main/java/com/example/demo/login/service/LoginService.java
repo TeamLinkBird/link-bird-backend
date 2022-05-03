@@ -25,7 +25,7 @@ public class LoginService {
     }
 
 
-    public User findAByuserId(String userId){
+    public User findByuserId(String userId){
         User user = loginRepo.findByUserId(userId);
         return user;
     }

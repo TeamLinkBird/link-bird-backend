@@ -8,7 +8,6 @@ import com.example.demo.common.utility.OauthUtility;
 import com.example.demo.common.utility.UrlUtility;
 import com.example.demo.login.entity.User;
 import com.example.demo.login.service.LoginService;
-import com.example.demo.login.service.OauthLoginService;
 import io.jsonwebtoken.ExpiredJwtException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,13 +35,13 @@ public class LoginController {
     LoginService loginService;
 
     @Value("${accessTokenTime}")
-    int accessTokenTime;
+    Long accessTokenTime;
 
     @Value("${refreshTokenTime}")
-    int refreshTokenTime;
+    Long refreshTokenTime;
 
-    @Value("${accessTokenTime.oauth}")
-    int oauth_accessToken_Time;
+    @Value("${shortTimeAccessToken}")
+    Long shortTimeAccessToken;
 
     //oauth_refreshToken_Time 은 social 에서 정해져 있다.
 
@@ -70,12 +69,20 @@ public class LoginController {
     @Value("${jwtsecretKey}")
     String jwtsecretKey;
 
+    @Value("forwardsecretKey")
+    String forwardsecretKey;
+
+    @Value("refreshTokensecretKey")
+    String refreshTokensecretKey;
+
 
     @GetMapping("/")
     public HashMap<String, String> getMainData(HttpServletRequest request) {
-        HashMap<String, String> idMap = new HashMap<>();
-        idMap.put("id", (String)request.getAttribute("id"));
-        return idMap;
+        HashMap<String, String> map = new HashMap<>();
+        map.put("id", (String)request.getAttribute("id"));
+        map.put("access_Token", (String)request.getAttribute("access_Token"));
+        map.put("refresh_Token", (String)request.getAttribute("refresh_Token"));
+        return map;
     }
 
     @GetMapping("/login")
@@ -96,9 +103,9 @@ public class LoginController {
         }
 
         dataMap.put("id", userId);
-        dataMap = JwtUtility.makeToken(accessTokenTime, refreshTokenTime, dataMap, jwtsecretKey);
+        dataMap = JwtUtility.makeToken(accessTokenTime, refreshTokenTime, dataMap, jwtsecretKey, refreshTokensecretKey);
 
-        User user = loginService.findAByuserId(userId);
+        User user = loginService.findByuserId(userId);
 
         if (user != null) {
             log.info("DB 에 단말기 정보 존재 : {}", userId);
@@ -124,15 +131,17 @@ public class LoginController {
     public HashMap<String, String> kakaoLogin(HttpServletRequest request) throws Exception {
         HashMap<String, String> token = null;
         HashMap<String, String> serverToken = null;
+        HashMap<String, String> socialToken = null;
         String userId = null;
         User user = null;
 
         String authorize_code = request.getParameter("code");
+        log.info("authorize_code : {}",authorize_code);
         token = OauthUtility.getToken(authorize_code, jwtURL, clientID, request.getRequestURL().toString(), client_secret);
-        userId = OauthUtility.getUserId(token.get("access_Token"), userURL);
-        user = loginService.findAByuserId(userId);
-        token = JwtUtility.makeToken(accessTokenTime, refreshTokenTime, token, jwtsecretKey);
-        serverToken = token;
+        socialToken = new HashMap<>(token);
+        userId = OauthUtility.getUserId(socialToken.get("access_Token"), userURL);
+        user = loginService.findByuserId(userId);
+        serverToken = JwtUtility.makeToken(accessTokenTime, refreshTokenTime, socialToken, jwtsecretKey, refreshTokensecretKey);
 
         // CASE 1) DB 에 회원 아이디가 있다면 , 회원 아이디에 대한 메인페이지 정보와 로컬 토큰을 사용자에게 반환한다.
         // CASE 2) DB 에 회원 아이디가 없다면 , 회원 아이디를 등록하고 ,  메인페이지 정보와 로컬 토큰을 사용자에게 반환한다.
@@ -147,6 +156,7 @@ public class LoginController {
         user.setRefreshToken(serverToken.get("refresh_Token"));
         em.persist(user);
         serverToken.put("state", "main");
+
         return serverToken;
     }
 
@@ -167,32 +177,19 @@ public class LoginController {
         String userId = tokenMap.get("id"); // 단말기 id 가져옴
         User user = null;
         if (userId == null) {//social 로그인 상태
-            if (OauthUtility.isAccessTokenTimeShort(tokenMap.get("access_Token"), tokeninfoURL, oauth_accessToken_Time)) //소셜 토큰 무효하면 갱신.
+            if (OauthUtility.isAccessTokenTimeShort(tokenMap.get("access_Token"), tokeninfoURL, shortTimeAccessToken)) //소셜 토큰 무효하면 갱신.
                 tokenMap = OauthUtility.renewalToken(jwtURL, tokenMap.get("refresh_Token"), clientID, client_secret);
             //소셜 토큰을 만료시킨다
             userId = OauthUtility.doLogout(tokenMap.get("access_Token"), kakaologoutURL).toString();
         }
-        user = loginService.findAByuserId(userId);
+        user = loginService.findByuserId(userId);
         if(user == null) {
             log.warn("로그아웃 도중 db 로부터 사용자 ID 검색에 실패 하였습니다.");
         }else{
-            user.setRefreshToken(null); // 서버 refresh_Token 을 db 에서 제거
+            user.setRefreshToken(null);
             em.persist(user);
         }
 
         return UrlUtility.loginUrl(serverURI);
-    }
-
-    public void makeMap(HashMap<String, Integer> timeMap, HashMap<String, String> urlMap, HashMap<String, String> secretMap) {
-        timeMap.put("accessTokenTime", accessTokenTime);
-        timeMap.put("refreshTokenTime", refreshTokenTime);
-        timeMap.put("oauth_accessToken_Time", oauth_accessToken_Time);
-        urlMap.put("serverURI", serverURI);
-        urlMap.put("tokeninfoURL", tokeninfoURL);
-        urlMap.put("jwtURL", jwtURL);
-        urlMap.put("userURL", userURL);
-        secretMap.put("clientID", clientID);
-        secretMap.put("client_secret", client_secret);
-        secretMap.put("jwtsecretKey", jwtsecretKey);
     }
 }

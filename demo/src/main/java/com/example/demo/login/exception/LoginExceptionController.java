@@ -37,6 +37,9 @@ public class LoginExceptionController {
             ex.printStackTrace();
             return UrlUtility.loginUrl(serverURI);
         }
+        else if(ex instanceof ExpiredJwtException && "refresh_Token expired".equals(ex.getMessage())){ // 서버 refresh_Token 만료됬을 경우
+            return UrlUtility.loginUrl(serverURI);
+        }
         else if (ex instanceof ExpiredJwtException) {// 서버 access_Token 만료됬을 경우
             log.info("ExpiredJwtException");
             dataMap.put("state", "refresh_Token");
@@ -45,7 +48,6 @@ public class LoginExceptionController {
             dataMap.put("method", "get");
             log.info("사용자에게 전달하는 데이터 : {}", dataMap);
             return dataMap;
-
         }
         //////////////////OauthUtility.getUserId , OauthUtility.getToken , OauthUtility.isAccessTokenTimeShort , OauthUtility.renewalToken ,///////////////////
         //////////////////OauthUtility.doLogout

@@ -38,14 +38,18 @@ public class RefreshTokenController {
     @Value("${jwtsecretKey}")
     String jwtsecretKey;
 
+    @Value("refreshTokensecretKey")
+    String refreshTokensecretKey;
+
+
+
     @Transactional
     @GetMapping("/refresh_Token")
     public String check_Server_Refresh_Token(HttpServletRequest request, @RequestBody HashMap<String, String> tokenMap) throws Exception {
         String forwardUrl = tokenMap.get("source");
         String header = request.getHeader("Authorization");
-        String access_Token;
         JwtUtility.validationAuthorizationHeader(header);
-        access_Token = JwtUtility.extractAccessToken(header);
+        String access_Token = JwtUtility.extractAccessToken(header);
         tokenMap.put("access_Token", access_Token);
 
         //받은 refresh_Token 검색
@@ -54,24 +58,28 @@ public class RefreshTokenController {
             throw new LoginException();
         }
 
-
-        //서버 refresh_Token 유효,무효 둘다
         String id = user.getUserId();
-        String social_access_Token = user.getSocialAccessToken();
-        String social_refresh_Token = user.getSocialRefreshToken();
-        HashMap<String, String> token = new HashMap<>();
-        token.put("id", id);
-        token.put("access_Token", social_access_Token);
-        token.put("refresh_Token", social_refresh_Token);
-        token = JwtUtility.makeToken(accessTokenTime, refreshTokenTime, token, jwtsecretKey); //서버 Token 갱신
-        user.setRefreshToken(token.get("refresh_Token"));
-        em.persist(user);
-        request.setAttribute("id", id);
-        request.setAttribute("access_Token", token.get("access_Token"));  // 서버 access_Token
-        request.setAttribute("refresh_Token", token.get("refresh_Token")); // 서버 refresh_Token
-        request.setAttribute("forwardsecretKey", forwardsecretKey);
-        return "forward:/" + forwardUrl;
-
+        Boolean isExpired = JwtUtility.isExpiredRefreshToken(tokenMap);
+        if(!isExpired) {
+            //1.서버 refresh_Token 유효할 경우 ,
+            ////1-1.서버 refresh_Token 으로 부터 claim datas(소셜 access_Token, 소셜 refresh_Token)을 얻는다.
+            ////1-2. 얻은 정보를 토대로 서버 access_Token을 만든다.
+            ////1-3. 서버에게 id , 서버 access_Token , 서버 refresh_Token 반환.
+            HashMap <String, String> social_Token = JwtUtility.getClaimDataFromRefreshToken(tokenMap.get("access_Token"),tokenMap.get("refresh_Token"),refreshTokensecretKey);
+            String new_access_Token = JwtUtility.makeJwtToken(accessTokenTime, social_Token, jwtsecretKey);
+            request.setAttribute("id", id);
+            request.setAttribute("access_Token", new_access_Token);  // 서버 access_Token
+            request.setAttribute("forwardsecretKey", forwardsecretKey);
+            return "forward:/" + forwardUrl;
+        }
+        else {
+            //2.서버 refresh_Token 무효할 경우
+            ////2-1. db에서 서버 refresh_Token을 null 로 만들고
+            ////2-2. 사용자에게 로그인 페이지 전달.
+            user.setRefreshToken(null);
+            em.persist(user);
+            throw new LoginException();
+        }
     }
 
 }

@@ -25,6 +25,7 @@ public class OauthUtility {
         String clientID = secretMap.get("clientID");
         String client_secret = secretMap.get("client_secret");
         String secretKey = secretMap.get("jwtsecretKey");
+        String refreshTokensecretKey = secretMap.get("refreshTokensecretKey");
 
         HashMap<String ,String> newSocialToken;
         HashMap<String ,String> newLocalToken;
@@ -34,7 +35,7 @@ public class OauthUtility {
         String id;
         if(isExpired==null || isExpired) { //소셜 Access_Token 만료 됨
             newSocialToken = OauthUtility.renewalToken(jwtURL, socialTokenMap.get("refresh_Token"), clientID, client_secret);
-            newLocalToken = JwtUtility.makeToken(accessTokenTime, refreshTokenTime, newSocialToken, secretKey);
+            newLocalToken = JwtUtility.makeToken(accessTokenTime, refreshTokenTime, newSocialToken, secretKey, refreshTokensecretKey);
             id = OauthUtility.getUserId(newSocialToken.get("access_Token"),userURL);
             dataMap.put("social_access_Token",newSocialToken.get("social_access_Token"));
             dataMap.put("social_refresh_Token",newSocialToken.get("social_refresh_Token"));
