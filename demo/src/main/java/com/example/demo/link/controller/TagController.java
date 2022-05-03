@@ -3,6 +3,7 @@ package com.example.demo.link.controller;
 import com.example.demo.link.dto.TagDto;
 import com.example.demo.link.service.TagService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -15,11 +16,12 @@ import java.util.List;
 @RestController
 @RequestMapping("/tags")
 @RequiredArgsConstructor
+@Tag(name = "Tag", description = "Tag 관련 API")
 public class TagController {
 
     private final TagService tagService;
 
-    @Operation(summary = "Get All Tags", description = "사용자의 모든 태그를 검색합니다.")
+    @Operation(tags = "Tag", summary = "사용자의 모든 태그를 검색합니다.", description = "")
     @GetMapping(produces = {MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<List<TagDto>> getAllTags(HttpServletRequest request){
         String userId = (String) request.getAttribute("id");
@@ -27,13 +29,13 @@ public class TagController {
         return new ResponseEntity<List<TagDto>>(tags, HttpStatus.OK);
     }
 
-    @Operation(summary = "Get Tag", description = "태그를 검색합니다.")
+    @Operation(tags = "Tag", summary = "태그를 검색합니다.", description = "")
     @GetMapping(value = "/{tagCode}", produces = {MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<TagDto> getTag(@PathVariable("tagCode") Long tagCode){
         return new ResponseEntity<TagDto>(tagService.findByTagCode(tagCode),HttpStatus.OK);
     }
 
-    @Operation(summary = "Delete Tag", description = "태그를 제거합니다.")
+    @Operation(tags = "Tag", summary = "태그를 제거합니다.", description = "")
     @DeleteMapping(value = "/{tagCode}", produces = {MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<Void> deleteTag(@PathVariable("tagCode")Long tagCode){
         tagService.deleteByTagCode(tagCode);
