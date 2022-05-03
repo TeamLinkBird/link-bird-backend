@@ -11,4 +11,5 @@ import java.util.List;
 public interface TagRepo extends JpaRepository<Tag,Long> {
 
     List<Tag> findAllByUser(User user);
+    List<Tag> findAllByUserAndTagNameStartingWith(User user,String tagName);
 }

@@ -29,10 +29,12 @@ public class TagController {
         return new ResponseEntity<List<TagDto>>(tags, HttpStatus.OK);
     }
 
-    @Operation(tags = "Tag", summary = "태그를 검색합니다.", description = "")
-    @GetMapping(value = "/{tagCode}", produces = {MediaType.APPLICATION_JSON_VALUE})
-    public ResponseEntity<TagDto> getTag(@PathVariable("tagCode") Long tagCode){
-        return new ResponseEntity<TagDto>(tagService.findByTagCode(tagCode),HttpStatus.OK);
+    @Operation(tags = "Tag", summary = "태그를 검색합니다.", description = "태그이름으로 검색어 추천할 때 사용")
+    @GetMapping(value = "/{tagName}", produces = {MediaType.APPLICATION_JSON_VALUE})
+    public ResponseEntity<List<TagDto>> getTag(@PathVariable("tagName") String tagName, HttpServletRequest request){
+        String userId = (String) request.getAttribute("id");
+        List<TagDto> tags = tagService.findAllByUserAndTagNameStartingWith(userId, tagName);
+        return new ResponseEntity<List<TagDto>>(tags,HttpStatus.OK);
     }
 
     @Operation(tags = "Tag", summary = "태그를 제거합니다.", description = "")

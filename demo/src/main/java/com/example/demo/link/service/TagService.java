@@ -37,6 +37,16 @@ public class TagService {
                 .tagName(tag.get().getTagName())
                 .build();
     }
+    public List<TagDto> findAllByUserAndTagNameStartingWith(String userId, String tagName){
+        User user = loginRepo.findByUserId(userId);
+        List<Tag> tags = user.getTags();
+        return tags.stream().map(tag ->
+                TagDto.builder()
+                        .tagOrder(tag.getTagOrder())
+                        .tagName(tag.getTagName())
+                        .build())
+                .collect(Collectors.toList());
+    }
 
     public void updateByTagCode(long tagCode){
         // todo helper 만들어서 set 하고 업데이트하기
