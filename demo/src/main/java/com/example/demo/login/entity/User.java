@@ -13,11 +13,8 @@ import com.example.demo.link.entity.Tag;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.springframework.lang.Nullable;
 
 import javax.persistence.*;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 
 @Data
@@ -28,7 +25,6 @@ public class User extends BaseTimeEntity {
 
     @Id
     private String userId;
-
 
     @Convert(converter = AuthConverter.class)
     private Auth auth;
@@ -43,7 +39,7 @@ public class User extends BaseTimeEntity {
 
     private String userNm;
 
-    @Column(unique = true)
+    @Column(unique = true,length = 1000)
     private String refreshToken;
 
     @OneToMany(mappedBy = "user")

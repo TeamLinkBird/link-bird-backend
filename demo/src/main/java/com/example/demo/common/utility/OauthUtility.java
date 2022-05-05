@@ -16,7 +16,7 @@ public class OauthUtility {
             (HashMap<String,String> socialTokenMap , HashMap<String,Long> timeMap ,
              HashMap<String,String> urlMap , HashMap<String,String> secretMap) throws Exception{
 
-        Long oauth_accessToken_Time = timeMap.get("oauth_accessToken_Time");
+        Long shortTimeAccessToken = timeMap.get("shortTimeAccessToken");
         Long  accessTokenTime = timeMap.get("accessTokenTime");
         Long refreshTokenTime = timeMap.get("refreshTokenTime");
         String tokeninfoURL =  urlMap.get("tokeninfoURL");
@@ -31,7 +31,7 @@ public class OauthUtility {
         HashMap<String ,String> newLocalToken;
         HashMap<String ,String> dataMap = new HashMap<>();
 
-        Boolean isExpired = OauthUtility.isAccessTokenTimeShort (socialTokenMap.get("access_Token") ,tokeninfoURL ,oauth_accessToken_Time); //accessToken 만료여부 검사
+        Boolean isExpired = OauthUtility.isAccessTokenTimeShort (socialTokenMap.get("access_Token") ,tokeninfoURL ,shortTimeAccessToken); //accessToken 만료여부 검사
         String id;
         if(isExpired==null || isExpired) { //소셜 Access_Token 만료 됨
             newSocialToken = OauthUtility.renewalToken(jwtURL, socialTokenMap.get("refresh_Token"), clientID, client_secret);
@@ -191,9 +191,7 @@ public class OauthUtility {
     //Social accessToken 유효기간이 짧은가 검사  ,  짧으면 true , 길면 false
     public static Boolean isAccessTokenTimeShort(String access_Token, String tokeninfoURL,
                                                  Long shortTimeAccessToken) throws Exception {
-
         // 요청하는 클라이언트마다 가진 정보가 다를 수 있기에 HashMap타입으로 선언
-        HashMap<String, Object> userInfo = new HashMap<>();
         boolean isRenewal = false;
         URL url = new URL(tokeninfoURL);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -228,7 +226,7 @@ public class OauthUtility {
         JsonElement element = parser.parse(result);
 
         Long expires_in = element.getAsJsonObject().get("expires_in").getAsLong();
-        log.info("oauth_accessToken_Time : {}", shortTimeAccessToken);
+        log.info("shortTimeAccessToken : {}", shortTimeAccessToken);
         log.info("expires_in : {}", expires_in);
 
         isRenewal = expires_in <= shortTimeAccessToken; //true : 만료시간이 1시간도 안남아서 갱신해야 한다는 의미

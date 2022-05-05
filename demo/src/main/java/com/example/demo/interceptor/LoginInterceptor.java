@@ -60,19 +60,17 @@ public class LoginInterceptor implements HandlerInterceptor {
     @Value("${jwtsecretKey}")
     String jwtsecretKey;
 
-    @Value("forwardsecretKey")
-    String forwardsecretKey;
-
     @Value("refreshTokensecretKey")
     String refreshTokensecretKey;
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-        String pw = (String)request.getAttribute("forwardsecretKey");
-        if(forwardsecretKey.equals(pw))
-            return true;
+        log.info("request uri : {} ",request.getRequestURI());
+        if(hasExcludeUrl(request.getRequestURI()))
+            return false;
         HashMap<String,String> dataMap = JwtUtility.getSocialToken(request,jwtsecretKey);
         String id = dataMap.get("id");
+        log.info("id: {}",id);
         if(id == null) { // social 의 경우
             HashMap<String ,Long> timeMap = new HashMap<>();
             HashMap<String ,String> urlMap = new HashMap<>();
@@ -84,6 +82,12 @@ public class LoginInterceptor implements HandlerInterceptor {
         }
         request.setAttribute("id",id);
         return true;
+    }
+
+    private boolean hasExcludeUrl(String uri) {
+        if("/favicon.ico".equals(uri))
+            return true;
+        return false;
     }
 
     @Transactional
@@ -102,7 +106,7 @@ public class LoginInterceptor implements HandlerInterceptor {
     public void makeMap(HashMap<String, Long> timeMap, HashMap<String, String> urlMap, HashMap<String, String> secretMap) {
         timeMap.put("accessTokenTime", accessTokenTime);
         timeMap.put("refreshTokenTime", refreshTokenTime);
-        timeMap.put("shorTimeAccessToken", shortTimeAccessToken);
+        timeMap.put("shortTimeAccessToken", shortTimeAccessToken);
         urlMap.put("serverURI", serverURI);
         urlMap.put("tokeninfoURL", tokeninfoURL);
         urlMap.put("jwtURL", jwtURL);

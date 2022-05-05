@@ -32,7 +32,7 @@ public class JwtUtility {
         HashMap<String, String> tokenMap = new HashMap<>();
 
         String access_Token = makeJwtToken(accessTokenTime, dataMap, secretKey);
-        String refresh_Token = createRefreshToken(refreshTokenTime, access_Token, dataMap, refreshTokensecretKey);
+        String refresh_Token = createRefreshToken(refreshTokenTime, dataMap, refreshTokensecretKey);
 
         tokenMap.put("access_Token", access_Token);
         tokenMap.put("refresh_Token", refresh_Token);
@@ -64,6 +64,7 @@ public class JwtUtility {
         else{   //비회원 로그인일 경우
             jwtBuilder
                     .claim("id", dataMap.get("id"));// 비공개 클레임
+            log.info("dataMap.get(\"id\") : {}",dataMap.get("id"));
         }
 
 
@@ -71,14 +72,14 @@ public class JwtUtility {
     }
 
     //로컬 refresh 토큰 생성후 반환
-    private static String createRefreshToken(Long refreshTokenTime, String server_access_Token, HashMap<String, String> social_Token, String refreshTokensecretKey) {
+    private static String createRefreshToken(Long refreshTokenTime, HashMap<String, String> social_Token, String refreshTokensecretKey) {
 
         Date expireTime = new Date(System.currentTimeMillis() + refreshTokenTime);
 
         JwtBuilder jwtBuilder = Jwts.builder()
                 .setSubject("valid")
                 .setIssuedAt(new Date())                     // 발행일자를 담아서 암호화
-                .signWith(SignatureAlgorithm.HS256, server_access_Token+refreshTokensecretKey)
+                .signWith(SignatureAlgorithm.HS256, refreshTokensecretKey)
                 .setExpiration(expireTime);
 
         if(social_Token!=null){
@@ -117,12 +118,10 @@ public class JwtUtility {
 
     //로컬 refresh 만료 검사  , 유효하면 false , 만료면 예외처리
     //input : tokenMap(서버 access_Token , 서버 refresh_Token)
-    public static boolean isExpiredRefreshToken(HashMap<String, String> tokenMap) {
-        String access_Token = tokenMap.get("access_Token");
-        String refresh_Token = tokenMap.get("refresh_Token");
+    public static boolean isExpiredRefreshToken(String refresh_Token, String refreshTokensecretKey) {
         try {
             Jwts.parser()
-                    .setSigningKey(access_Token)
+                    .setSigningKey(refreshTokensecretKey)
                     .parseClaimsJws(refresh_Token)
                     .getBody()
                     .getExpiration();
@@ -178,17 +177,17 @@ public class JwtUtility {
 
     //input : server_access_Token , server_refresh_Token
     //output : HashMap(social_access_Token,social_refresh_Token)
-    public static HashMap<String, String> getClaimDataFromRefreshToken(String server_access_Token, String server_refresh_Token, String refreshTokensecretKey) throws Exception{
+    public static HashMap<String, String> getClaimDataFromRefreshToken(String server_refresh_Token, String refreshTokensecretKey) throws Exception{
         Claims claims = Jwts.parser()
-                .setSigningKey(server_access_Token+refreshTokensecretKey)
+                .setSigningKey(refreshTokensecretKey)
                 .parseClaimsJws(server_refresh_Token)  // UnsupportedJwtException,MalformedJwtException,SignatureException,ExpiredJwtException,IllegalArgumentException
                 .getBody();
-        String social_access_Token = (String) claims.get("access_Token");
-        String social_refresh_Token = (String) claims.get("refresh_Token");
+        String access_Token = (String) claims.get("access_Token");
+        String refresh_Token = (String) claims.get("refresh_Token");
 
         HashMap<String, String> social_Token = new HashMap<>();
-        social_Token.put("social_access_Token",social_access_Token);
-        social_Token.put("social_refresh_Token",social_refresh_Token);
+        social_Token.put("access_Token",access_Token);
+        social_Token.put("refresh_Token",refresh_Token);
         return social_Token;
     }
 
@@ -196,6 +195,7 @@ public class JwtUtility {
     public static HashMap<String, String> getClaimData(String authorizationHeader, String secretKey, String... keys) throws Exception {
 
         HashMap<String, String> dataMap = new HashMap<>();
+
         Claims claims = parseToken(authorizationHeader, secretKey);
 
         for (int idx = 0; idx < keys.length; idx++)

@@ -5,8 +5,8 @@ import com.example.demo.common.commonenum.Social;
 import com.example.demo.common.commonenum.UserStatus;
 import com.example.demo.common.utility.JwtUtility;
 import com.example.demo.common.utility.OauthUtility;
-import com.example.demo.common.utility.UrlUtility;
 import com.example.demo.login.entity.User;
+import com.example.demo.login.exception.LoginException;
 import com.example.demo.login.service.LoginService;
 import io.jsonwebtoken.ExpiredJwtException;
 import lombok.extern.slf4j.Slf4j;
@@ -77,17 +77,14 @@ public class LoginController {
 
 
     @GetMapping("/")
-    public HashMap<String, String> getMainData(HttpServletRequest request) {
-        HashMap<String, String> map = new HashMap<>();
-        map.put("id", (String)request.getAttribute("id"));
-        map.put("access_Token", (String)request.getAttribute("access_Token"));
-        map.put("refresh_Token", (String)request.getAttribute("refresh_Token"));
-        return map;
+    public String getDMainata(HttpServletRequest request) {
+        log.info("id : {}", request.getAttribute("id"));
+        return "ok";
     }
 
     @GetMapping("/login")
-    public HashMap<String, String> login() {
-        return UrlUtility.loginUrl(serverURI);
+    public HashMap<String, String> login() throws Exception{
+        throw new LoginException();
     }
 
     @Transactional
@@ -97,14 +94,12 @@ public class LoginController {
 
         HashMap<String, String> dataMap = new HashMap<>();
         String userId = idMap.get("id");
-        log.info("단말기 ID : {}", userId);
         if (userId == null) {
             throw new NullPointerException("단말기에서 전송한 ID 데이터가 없습니다.");
         }
 
         dataMap.put("id", userId);
         dataMap = JwtUtility.makeToken(accessTokenTime, refreshTokenTime, dataMap, jwtsecretKey, refreshTokensecretKey);
-
         User user = loginService.findByuserId(userId);
 
         if (user != null) {
@@ -121,8 +116,6 @@ public class LoginController {
             user.setRefreshToken(dataMap.get("refresh_Token"));
         }
         em.persist(user);
-        dataMap.remove("id");
-        dataMap.put("state", "main");
         return dataMap;
     }
 
@@ -138,9 +131,11 @@ public class LoginController {
         String authorize_code = request.getParameter("code");
         log.info("authorize_code : {}",authorize_code);
         token = OauthUtility.getToken(authorize_code, jwtURL, clientID, request.getRequestURL().toString(), client_secret);
+        log.info("소셜 token : {}",token);
         socialToken = new HashMap<>(token);
         userId = OauthUtility.getUserId(socialToken.get("access_Token"), userURL);
         user = loginService.findByuserId(userId);
+        log.info("소셜 socialToken : {}",socialToken);
         serverToken = JwtUtility.makeToken(accessTokenTime, refreshTokenTime, socialToken, jwtsecretKey, refreshTokensecretKey);
 
         // CASE 1) DB 에 회원 아이디가 있다면 , 회원 아이디에 대한 메인페이지 정보와 로컬 토큰을 사용자에게 반환한다.
@@ -154,10 +149,16 @@ public class LoginController {
             user.setUserStatus(UserStatus.활성화);
         }
         user.setRefreshToken(serverToken.get("refresh_Token"));
+        log.info("refresh_Token : {}",serverToken.get("refresh_Token"));
         em.persist(user);
-        serverToken.put("state", "main");
-
         return serverToken;
+    }
+
+    @Transactional
+    @GetMapping("/login/naver")
+    public HashMap<String, String> naverLogin(@RequestBody HashMap<String, String> dataMap) throws Exception {
+        log.info("ok");
+        return null;
     }
 
     @Transactional
@@ -171,7 +172,7 @@ public class LoginController {
             tokenMap = JwtUtility.getClaimData(header, jwtsecretKey, "access_Token", "refresh_Token", "id");
         }catch(ExpiredJwtException e){
             log.info("서버의 access_Token 이 만료 되었으므로 login 페이지정보 전달");
-            return UrlUtility.loginUrl(serverURI);
+            throw new LoginException();
         }
 
         String userId = tokenMap.get("id"); // 단말기 id 가져옴
@@ -189,7 +190,40 @@ public class LoginController {
             user.setRefreshToken(null);
             em.persist(user);
         }
+        throw new LoginException();
+    }
 
-        return UrlUtility.loginUrl(serverURI);
+    @Transactional
+    @GetMapping("/refresh_Token")
+    public HashMap<String, String> check_Server_Refresh_Token(@RequestBody HashMap<String, String> tokenMap) throws Exception {
+        //받은 refresh_Token 검색
+        User user = loginService.findByRefreshToken(tokenMap.get("refresh_Token"));
+        if (user == null) {
+            throw new LoginException();
+        }
+
+        Boolean isExpired = JwtUtility.isExpiredRefreshToken(tokenMap.get("refresh_Token"),refreshTokensecretKey);
+        if(!isExpired) {
+            //1.서버 refresh_Token 유효할 경우 ,
+            ////1-1.서버 refresh_Token 으로 부터 claim datas(소셜 access_Token, 소셜 refresh_Token)을 얻는다.
+            ////1-2. 얻은 정보를 토대로 서버 access_Token을 만든다.
+            ////1-3. 서버에게 id , 서버 access_Token , 서버 refresh_Token 반환.
+            HashMap <String, String> social_Token = JwtUtility.getClaimDataFromRefreshToken(tokenMap.get("refresh_Token"),refreshTokensecretKey);
+            if(user.getAuth().equals(Auth.비회원)) {//비회원이라면  social_Token에 key : id , value 추가
+                social_Token.put("id",user.getUserId());
+            }
+            String new_access_Token = JwtUtility.makeJwtToken(accessTokenTime, social_Token, jwtsecretKey);
+            tokenMap.clear();
+            tokenMap.put("access_Token",new_access_Token);
+            return tokenMap;
+        }
+        else {
+            //2.서버 refresh_Token 무효할 경우
+            ////2-1. db에서 서버 refresh_Token을 null 로 만들고
+            ////2-2. 사용자에게 로그인 페이지 전달.
+            user.setRefreshToken(null);
+            em.persist(user);
+            throw new LoginException();
+        }
     }
 }
