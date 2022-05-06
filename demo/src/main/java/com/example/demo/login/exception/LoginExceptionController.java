@@ -1,6 +1,8 @@
 package com.example.demo.login.exception;
 
 import com.example.demo.common.utility.UrlUtility;
+import com.example.demo.login.controller.LoginController;
+import com.example.demo.login.controller.RefreshTokenController;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.SignatureException;
@@ -17,7 +19,7 @@ import java.io.IOException;
 import java.util.HashMap;
 
 @Slf4j
-@RestControllerAdvice
+@RestControllerAdvice(assignableTypes = {LoginController.class, RefreshTokenController.class})
 public class LoginExceptionController {
 
     @Value("${serverURI}")
