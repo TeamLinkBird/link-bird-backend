@@ -45,9 +45,7 @@ public class JwtUtility {
     // output : 로컬 AccessToken
     public static String makeJwtToken(Long accessTokenTime, HashMap<String, String> dataMap, String secretKey) {
 
-        boolean flag = false; // false: 비회원 로그인 인 경우 ( 고유 id만 담김 )
-        if (dataMap.get("access_Token") != null)
-            flag = true;
+        boolean flag = dataMap.get("access_Token") != null; // false: 비회원 로그인 인 경우 ( 고유 id만 담김 )
 
         Date expireTime = new Date(System.currentTimeMillis() + accessTokenTime);
         JwtBuilder jwtBuilder = Jwts.builder()
@@ -97,7 +95,7 @@ public class JwtUtility {
 
 
     //로컬 access 토큰 검증   true: 유효 , false : 만료
-    public static Boolean isValidAccessToken(String jwtsecretKey, String access_Token) throws Exception{
+    public static Boolean isValidAccessToken(String jwtsecretKey, String access_Token) {
         Date access_Token_Time = Jwts.parser()
                 .setSigningKey(jwtsecretKey)
                 .parseClaimsJws(access_Token)
@@ -137,8 +135,8 @@ public class JwtUtility {
         String refresh_Token = tokenMap.get("refresh_Token");
 
         HashMap<String, Date> dateMap = new HashMap<>();
-        Date access_Token_Time = null;
-        Date refresh_Token_Time = null;
+        Date access_Token_Time;
+        Date refresh_Token_Time;
 
         access_Token_Time = Jwts.parser()
                 .setSigningKey(jwtsecretKey)
@@ -153,8 +151,8 @@ public class JwtUtility {
                 .getBody()
                 .getExpiration();
 
-        Long millis = access_Token_Time.getTime() - System.currentTimeMillis();
-        int second = millis.intValue() / 60;
+        long millis = access_Token_Time.getTime() - System.currentTimeMillis();
+        int second = (int) millis / 60;
         int minute = second / 60;
         int hour = minute / 60;
         int day = hour / 24;
@@ -162,7 +160,7 @@ public class JwtUtility {
         log.info("엑세스 토큰 남은 시간 : {}, 일 : {} ", hour, day);
 
         millis = refresh_Token_Time.getTime() - System.currentTimeMillis();
-        second = millis.intValue() / 60;
+        second = (int) millis / 60;
         minute = second / 60;
         hour = minute / 60;
         day = hour / 24;
@@ -177,7 +175,7 @@ public class JwtUtility {
 
     //input : server_access_Token , server_refresh_Token
     //output : HashMap(social_access_Token,social_refresh_Token)
-    public static HashMap<String, String> getClaimDataFromRefreshToken(String server_refresh_Token, String refreshTokensecretKey) throws Exception{
+    public static HashMap<String, String> getClaimDataFromRefreshToken(String server_refresh_Token, String refreshTokensecretKey) {
         Claims claims = Jwts.parser()
                 .setSigningKey(refreshTokensecretKey)
                 .parseClaimsJws(server_refresh_Token)  // UnsupportedJwtException,MalformedJwtException,SignatureException,ExpiredJwtException,IllegalArgumentException
@@ -192,14 +190,13 @@ public class JwtUtility {
     }
 
     // authorizationHeader 로부터 HashMap 데이터 획득
-    public static HashMap<String, String> getClaimData(String authorizationHeader, String secretKey, String... keys) throws Exception {
+    public static HashMap<String, String> getClaimData(String authorizationHeader, String secretKey, String... keys) {
 
         HashMap<String, String> dataMap = new HashMap<>();
 
         Claims claims = parseToken(authorizationHeader, secretKey);
 
-        for (int idx = 0; idx < keys.length; idx++)
-            dataMap.put(keys[idx], (String) claims.get(keys[idx]));
+        for (String key : keys) dataMap.put(key, (String) claims.get(key));
 
 
         return dataMap;
@@ -212,7 +209,7 @@ public class JwtUtility {
 
     }
 
-    public static Claims parseToken(String authorizationHeader, String secretKey) throws Exception {
+    public static Claims parseToken(String authorizationHeader, String secretKey) {
         validationAuthorizationHeader(authorizationHeader); // IllegalArgumentException
         String token = extractAccessToken(authorizationHeader); //  IndexOutOfBoundsException ,  NullPointerException
 
@@ -225,14 +222,14 @@ public class JwtUtility {
         //JWT 예외 UnsupportedJwtException,MalformedJwtException,SignatureException,ExpiredJwtException,IllegalArgumentException,
     }
 
-    public static void validationAuthorizationHeader(String header) throws Exception {
+    public static void validationAuthorizationHeader(String header) {
         if (header == null || !header.startsWith("Bearer ")) {
             throw new IllegalArgumentException();
         }
         //예외 : IllegalArgumentException
     }
 
-    public static String extractAccessToken(String authorizationHeader) throws Exception {
+    public static String extractAccessToken(String authorizationHeader) {
         return authorizationHeader.substring("Bearer ".length());
         //예외 : IndexOutOfBoundsException ,  NullPointerException
     }

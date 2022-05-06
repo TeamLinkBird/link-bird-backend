@@ -39,23 +39,23 @@ public class LoginInterceptor implements HandlerInterceptor {
     @Value("${serverURI}")
     String serverURI;
 
-    @Value("${tokeninfoURL.kakao}")
-    String tokeninfoURL;
+    @Value("${tokeninfo.kakao}")
+    String tokeninfo_kakao;
 
     @Value("${jwtURL.kakao}")
-    String jwtURL;
+    String jwtURL_kakao;
 
     @Value("${userURL.kakao}")
-    String userURL;
+    String userURL_kakao;
 
     @Value(("${logoutURL.kakao}"))
-    String kakaologoutURL;
+    String kakaologout_URL;
 
     @Value("${clientID.kakao}")
-    String clientID;
+    String clientID_kakao;
 
     @Value("${clientSECRET.kakao}")
-    String client_secret;
+    String client_secret_kakao;
 
     @Value("${jwtsecretKey}")
     String jwtsecretKey;
@@ -85,9 +85,7 @@ public class LoginInterceptor implements HandlerInterceptor {
     }
 
     private boolean hasExcludeUrl(String uri) {
-        if("/favicon.ico".equals(uri))
-            return true;
-        return false;
+        return "/favicon.ico".equals(uri);
     }
 
     @Transactional
@@ -108,11 +106,11 @@ public class LoginInterceptor implements HandlerInterceptor {
         timeMap.put("refreshTokenTime", refreshTokenTime);
         timeMap.put("shortTimeAccessToken", shortTimeAccessToken);
         urlMap.put("serverURI", serverURI);
-        urlMap.put("tokeninfoURL", tokeninfoURL);
-        urlMap.put("jwtURL", jwtURL);
-        urlMap.put("userURL", userURL);
-        secretMap.put("clientID", clientID);
-        secretMap.put("client_secret", client_secret);
+        urlMap.put("tokeninfo_kakao", tokeninfo_kakao);
+        urlMap.put("jwtURL_kakao", jwtURL_kakao);
+        urlMap.put("userURL_kakao", userURL_kakao);
+        secretMap.put("clientID_kakao", clientID_kakao);
+        secretMap.put("client_secret_kakao", client_secret_kakao);
         secretMap.put("jwtsecretKey", jwtsecretKey);
         secretMap.put("refreshTokensecretKey",refreshTokensecretKey);
     }

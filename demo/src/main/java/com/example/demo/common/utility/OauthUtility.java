@@ -19,11 +19,11 @@ public class OauthUtility {
         Long shortTimeAccessToken = timeMap.get("shortTimeAccessToken");
         Long  accessTokenTime = timeMap.get("accessTokenTime");
         Long refreshTokenTime = timeMap.get("refreshTokenTime");
-        String tokeninfoURL =  urlMap.get("tokeninfoURL");
-        String jwtURL = urlMap.get("jwtURL");
-        String userURL = urlMap.get("userURL");
-        String clientID = secretMap.get("clientID");
-        String client_secret = secretMap.get("client_secret");
+        String tokeninfo_kakao =  urlMap.get("tokeninfo_kakao");
+        String jwtURL_kakao = urlMap.get("jwtURL_kakao");
+        String userURL_kakao = urlMap.get("userURL_kakao");
+        String clientID_kakao = secretMap.get("clientID_kakao");
+        String client_secret_kakao = secretMap.get("client_secret_kakao");
         String secretKey = secretMap.get("jwtsecretKey");
         String refreshTokensecretKey = secretMap.get("refreshTokensecretKey");
 
@@ -31,19 +31,19 @@ public class OauthUtility {
         HashMap<String ,String> newLocalToken;
         HashMap<String ,String> dataMap = new HashMap<>();
 
-        Boolean isExpired = OauthUtility.isAccessTokenTimeShort (socialTokenMap.get("access_Token") ,tokeninfoURL ,shortTimeAccessToken); //accessToken 만료여부 검사
+        Boolean isExpired = OauthUtility.isAccessTokenTimeShort (socialTokenMap.get("access_Token") ,tokeninfo_kakao ,shortTimeAccessToken); //accessToken 만료여부 검사
         String id;
         if(isExpired==null || isExpired) { //소셜 Access_Token 만료 됨
-            newSocialToken = OauthUtility.renewalToken(jwtURL, socialTokenMap.get("refresh_Token"), clientID, client_secret);
+            newSocialToken = OauthUtility.renewalToken(jwtURL_kakao, socialTokenMap.get("refresh_Token"), clientID_kakao, client_secret_kakao);
             newLocalToken = JwtUtility.makeToken(accessTokenTime, refreshTokenTime, newSocialToken, secretKey, refreshTokensecretKey);
-            id = OauthUtility.getUserId(newSocialToken.get("access_Token"),userURL);
+            id = OauthUtility.getUserId(newSocialToken.get("access_Token"),userURL_kakao);
             dataMap.put("social_access_Token",newSocialToken.get("social_access_Token"));
             dataMap.put("social_refresh_Token",newSocialToken.get("social_refresh_Token"));
             dataMap.put("access_Token",newLocalToken.get("access_Token"));
             dataMap.put("refresh_Token",newLocalToken.get("refresh_Token"));
         }
         else{//소셜 Access_Token 만료 안됨
-            id = OauthUtility.getUserId(socialTokenMap.get("access_Token"),userURL);
+            id = OauthUtility.getUserId(socialTokenMap.get("access_Token"),userURL_kakao);
         }
         dataMap.put("id",id);
         return dataMap;
@@ -64,13 +64,12 @@ public class OauthUtility {
 
         //    POST 요청에 필요로 요구하는 파라미터 스트림을 통해 전송
         BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(conn.getOutputStream()));
-        StringBuilder sb = new StringBuilder();
-        sb.append("grant_type=authorization_code");
-        sb.append("&client_id=" + clientID);  // fixed app id
-        sb.append("&redirect_uri=" + redirectURI);    // redirect_uri
-        sb.append("&code=" + authorize_code);
-        sb.append("&client_secret=" + client_secret);
-        bw.write(sb.toString());
+        String sb = "grant_type=authorization_code" +
+                "&client_id=" + clientID +  // fixed app id
+                "&redirect_uri=" + redirectURI +    // redirect_uri
+                "&code=" + authorize_code +
+                "&client_secret=" + client_secret;
+        bw.write(sb);
         bw.flush();
 
         //    결과 코드가 200이라면 성공
@@ -80,16 +79,16 @@ public class OauthUtility {
         //    요청을 통해 얻은 JSON타입의 Response 메세지 읽어오기
         BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
         String line = "";
-        String result = "";
+        StringBuilder result = new StringBuilder();
 
         while ((line = br.readLine()) != null) {
-            result += line;
+            result.append(line);
         }
-        log.info("response body : {}", result);
+        log.info("response body : {}", result.toString());
 
         //    Gson 라이브러리에 포함된 클래스로 JSON파싱 객체 생성
         JsonParser parser = new JsonParser();
-        JsonElement element = parser.parse(result);
+        JsonElement element = parser.parse(result.toString());
 
         map.put("access_Token", element.getAsJsonObject().get("access_token").getAsString());
         map.put("refresh_Token", element.getAsJsonObject().get("refresh_token").getAsString());
@@ -115,13 +114,12 @@ public class OauthUtility {
 
         //POST 요청에 필요로 요구하는 파라미터 스트림을 통해 전송
         BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(conn.getOutputStream()));
-        StringBuilder sb = new StringBuilder();
-        sb.append("grant_type=refresh_token");
-        sb.append("&client_id=").append(clientID);  // fixed app id
-        sb.append("&refresh_token=").append(refresh_Token);
-        sb.append("&client_secret=").append(client_secret);
 
-        bw.write(sb.toString());
+        String sb = "grant_type=refresh_token" +
+                "&client_id=" + clientID +  // fixed app id
+                "&refresh_token=" + refresh_Token +
+                "&client_secret=" + client_secret;
+        bw.write(sb);
         bw.flush();
 
         //    결과 코드가 200이라면 성공
@@ -131,16 +129,16 @@ public class OauthUtility {
         //    요청을 통해 얻은 JSON타입의 Response 메세지 읽어오기
         BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
         String line = "";
-        String result = "";
+        StringBuilder result = new StringBuilder();
 
         while ((line = br.readLine()) != null) {
-            result += line;
+            result.append(line);
         }
-        log.info("response body : {}", result);
+        log.info("response body : {}", result.toString());
 
         //    Gson 라이브러리에 포함된 클래스로 JSON파싱 객체 생성
         JsonParser parser = new JsonParser();
-        JsonElement element = parser.parse(result);
+        JsonElement element = parser.parse(result.toString());
 
         //refresh 토큰 갱신 안되면 null 반환 ( 1개월 이상 남으면 노갱신 )
         JsonElement tmp = element.getAsJsonObject().get("refresh_token");
@@ -171,29 +169,29 @@ public class OauthUtility {
         BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
 
         String line = "";
-        String result = "";
+        StringBuilder result = new StringBuilder();
 
         while ((line = br.readLine()) != null) {
-            result += line;
+            result.append(line);
         }
         log.info("response body : {}", result);
 
         JsonParser parser = new JsonParser();
-        JsonElement element = parser.parse(result);
+        JsonElement element = parser.parse(result.toString());
 
-        Long longId = element.getAsJsonObject().get("id").getAsLong();
-        id = longId.toString();
+        long longId = element.getAsJsonObject().get("id").getAsLong();
+        id = Long.toString(longId);
 
 
         return id;
     }
 
     //Social accessToken 유효기간이 짧은가 검사  ,  짧으면 true , 길면 false
-    public static Boolean isAccessTokenTimeShort(String access_Token, String tokeninfoURL,
+    public static Boolean isAccessTokenTimeShort(String access_Token, String tokeninfokakao,
                                                  Long shortTimeAccessToken) throws Exception {
         // 요청하는 클라이언트마다 가진 정보가 다를 수 있기에 HashMap타입으로 선언
-        boolean isRenewal = false;
-        URL url = new URL(tokeninfoURL);
+        boolean isRenewal;
+        URL url = new URL(tokeninfokakao);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.setRequestMethod("GET");
 
@@ -215,15 +213,15 @@ public class OauthUtility {
         BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
 
         String line = "";
-        String result = "";
+        StringBuilder result = new StringBuilder();
 
         while ((line = br.readLine()) != null) {
-            result += line;
+            result.append(line);
         }
         log.info("response body : {}", result);
 
         JsonParser parser = new JsonParser();
-        JsonElement element = parser.parse(result);
+        JsonElement element = parser.parse(result.toString());
 
         Long expires_in = element.getAsJsonObject().get("expires_in").getAsLong();
         log.info("shortTimeAccessToken : {}", shortTimeAccessToken);
@@ -237,7 +235,7 @@ public class OauthUtility {
     //Logout    사용자 id 반환( 다른 메소드에서 웹 서버 아이디 로그인 하는데 이용 )
     public static Long doLogout(String access_Token, String logoutURL) throws Exception {
         log.info("kakao 로그아웃 진행");
-        Long id = 0L;
+        long id;
 
         URL url = new URL(logoutURL);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -252,15 +250,15 @@ public class OauthUtility {
         BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
 
         String line = "";
-        String result = "";
+        StringBuilder result = new StringBuilder();
 
         while ((line = br.readLine()) != null) {
-            result += line;
+            result.append(line);
         }
         log.info("response body : {}", result);
 
         JsonParser parser = new JsonParser();
-        JsonElement element = parser.parse(result);
+        JsonElement element = parser.parse(result.toString());
 
         id = element.getAsJsonObject().get("id").getAsLong();
 

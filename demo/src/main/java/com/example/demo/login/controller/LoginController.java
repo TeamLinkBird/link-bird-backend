@@ -27,7 +27,6 @@ import java.util.HashMap;
 @RestController
 public class LoginController {
 
-    //private static EntityManagerFactory emf = Persistence.createEntityManagerFactory("jpaLogin");
     @PersistenceContext
     EntityManager em;
 
@@ -43,34 +42,29 @@ public class LoginController {
     @Value("${shortTimeAccessToken}")
     Long shortTimeAccessToken;
 
-    //oauth_refreshToken_Time 은 social 에서 정해져 있다.
-
     @Value("${serverURI}")
     String serverURI;
 
-    @Value("${tokeninfoURL.kakao}")
-    String tokeninfoURL;
+    @Value("${tokeninfo.kakao}")
+    String tokeninfo_kakao;
 
     @Value("${jwtURL.kakao}")
-    String jwtURL;
+    String jwtURL_kakao;
 
     @Value("${userURL.kakao}")
-    String userURL;
+    String userURL_kakao;
 
     @Value(("${logoutURL.kakao}"))
-    String kakaologoutURL;
+    String logoutURL_kakao;
 
     @Value("${clientID.kakao}")
-    String clientID;
+    String clientID_kakao;
 
     @Value("${clientSECRET.kakao}")
-    String client_secret;
+    String client_secret_kakao;
 
     @Value("${jwtsecretKey}")
     String jwtsecretKey;
-
-    @Value("forwardsecretKey")
-    String forwardsecretKey;
 
     @Value("refreshTokensecretKey")
     String refreshTokensecretKey;
@@ -89,7 +83,7 @@ public class LoginController {
 
     @Transactional
     @GetMapping("/login/unsigned")
-    public HashMap<String, String> unsignedLogin(@RequestBody HashMap<String, String> idMap) throws Exception{
+    public HashMap<String, String> unsignedLogin(@RequestBody HashMap<String, String> idMap){
         //일단 클라이언트에서 보낸 서버토큰은 확실히 없다.
 
         HashMap<String, String> dataMap = new HashMap<>();
@@ -104,7 +98,6 @@ public class LoginController {
 
         if (user != null) {
             log.info("DB 에 단말기 정보 존재 : {}", userId);
-            user.setRefreshToken(dataMap.get("refresh_Token"));
         }
         else {
             log.info("DB 에 단말기 정보 존재 X : {}", userId);
@@ -113,8 +106,8 @@ public class LoginController {
             user.setAuth(Auth.비회원);
             user.setSocial(Social.없음);
             user.setUserStatus(UserStatus.활성화);
-            user.setRefreshToken(dataMap.get("refresh_Token"));
         }
+        user.setRefreshToken(dataMap.get("refresh_Token"));
         em.persist(user);
         return dataMap;
     }
@@ -122,18 +115,18 @@ public class LoginController {
     @Transactional
     @GetMapping("/login/kakao")
     public HashMap<String, String> kakaoLogin(HttpServletRequest request) throws Exception {
-        HashMap<String, String> token = null;
-        HashMap<String, String> serverToken = null;
-        HashMap<String, String> socialToken = null;
-        String userId = null;
-        User user = null;
+        HashMap<String, String> token;
+        HashMap<String, String> serverToken;
+        HashMap<String, String> socialToken;
+        String userId;
+        User user;
 
         String authorize_code = request.getParameter("code");
         log.info("authorize_code : {}",authorize_code);
-        token = OauthUtility.getToken(authorize_code, jwtURL, clientID, request.getRequestURL().toString(), client_secret);
+        token = OauthUtility.getToken(authorize_code, jwtURL_kakao, clientID_kakao, request.getRequestURL().toString(), client_secret_kakao);
         log.info("소셜 token : {}",token);
         socialToken = new HashMap<>(token);
-        userId = OauthUtility.getUserId(socialToken.get("access_Token"), userURL);
+        userId = OauthUtility.getUserId(socialToken.get("access_Token"), userURL_kakao);
         user = loginService.findByuserId(userId);
         log.info("소셜 socialToken : {}",socialToken);
         serverToken = JwtUtility.makeToken(accessTokenTime, refreshTokenTime, socialToken, jwtsecretKey, refreshTokensecretKey);
@@ -156,16 +149,16 @@ public class LoginController {
 
     @Transactional
     @GetMapping("/login/naver")
-    public HashMap<String, String> naverLogin(@RequestBody HashMap<String, String> dataMap) throws Exception {
+    public HashMap<String, String> naverLogin() {
         log.info("ok");
         return null;
     }
 
     @Transactional
     @PostMapping("/logout")
-    public HashMap<String, String> logout(@RequestBody HashMap<String, String> dataMap, HttpServletRequest request) throws Exception {
+    public HashMap<String, String> logout(HttpServletRequest request) throws Exception {
 
-        HashMap<String, String> tokenMap = null;
+        HashMap<String, String> tokenMap;
         String header = request.getHeader("Authorization");
 
         try {  // 로컬 Access_Token 이 만료 되었을 경우, 로그인 페이지 안내
@@ -176,12 +169,13 @@ public class LoginController {
         }
 
         String userId = tokenMap.get("id"); // 단말기 id 가져옴
-        User user = null;
+        User user;
         if (userId == null) {//social 로그인 상태
-            if (OauthUtility.isAccessTokenTimeShort(tokenMap.get("access_Token"), tokeninfoURL, shortTimeAccessToken)) //소셜 토큰 무효하면 갱신.
-                tokenMap = OauthUtility.renewalToken(jwtURL, tokenMap.get("refresh_Token"), clientID, client_secret);
+            Boolean isRenewal = OauthUtility.isAccessTokenTimeShort(tokenMap.get("access_Token"), tokeninfo_kakao, shortTimeAccessToken);
+            if (isRenewal==null || isRenewal) //소셜 토큰 무효하면 갱신.
+                tokenMap = OauthUtility.renewalToken(jwtURL_kakao, tokenMap.get("refresh_Token"), clientID_kakao, client_secret_kakao);
             //소셜 토큰을 만료시킨다
-            userId = OauthUtility.doLogout(tokenMap.get("access_Token"), kakaologoutURL).toString();
+            userId = OauthUtility.doLogout(tokenMap.get("access_Token"), logoutURL_kakao).toString();
         }
         user = loginService.findByuserId(userId);
         if(user == null) {
@@ -202,7 +196,7 @@ public class LoginController {
             throw new LoginException();
         }
 
-        Boolean isExpired = JwtUtility.isExpiredRefreshToken(tokenMap.get("refresh_Token"),refreshTokensecretKey);
+        boolean isExpired = JwtUtility.isExpiredRefreshToken(tokenMap.get("refresh_Token"),refreshTokensecretKey);
         if(!isExpired) {
             //1.서버 refresh_Token 유효할 경우 ,
             ////1-1.서버 refresh_Token 으로 부터 claim datas(소셜 access_Token, 소셜 refresh_Token)을 얻는다.
