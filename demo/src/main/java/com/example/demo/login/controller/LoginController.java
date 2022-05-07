@@ -131,8 +131,6 @@ public class LoginController {
         log.info("소셜 socialToken : {}",socialToken);
         serverToken = JwtUtility.makeToken(accessTokenTime, refreshTokenTime, socialToken, jwtsecretKey, refreshTokensecretKey);
 
-        // CASE 1) DB 에 회원 아이디가 있다면 , 회원 아이디에 대한 메인페이지 정보와 로컬 토큰을 사용자에게 반환한다.
-        // CASE 2) DB 에 회원 아이디가 없다면 , 회원 아이디를 등록하고 ,  메인페이지 정보와 로컬 토큰을 사용자에게 반환한다.
         if (user == null) {
             log.info("새롭게 계정 등록");
             user = new User();
@@ -161,20 +159,19 @@ public class LoginController {
         HashMap<String, String> tokenMap;
         String header = request.getHeader("Authorization");
 
-        try {  // 로컬 Access_Token 이 만료 되었을 경우, 로그인 페이지 안내
+        try {
             tokenMap = JwtUtility.getClaimData(header, jwtsecretKey, "access_Token", "refresh_Token", "id");
         }catch(ExpiredJwtException e){
             log.info("서버의 access_Token 이 만료 되었으므로 login 페이지정보 전달");
             throw new LoginException();
         }
 
-        String userId = tokenMap.get("id"); // 단말기 id 가져옴
+        String userId = tokenMap.get("id");
         User user;
-        if (userId == null) {//social 로그인 상태
+        if (userId == null) {
             Boolean isRenewal = OauthUtility.isAccessTokenTimeShort(tokenMap.get("access_Token"), tokeninfo_kakao, shortTimeAccessToken);
-            if (isRenewal==null || isRenewal) //소셜 토큰 무효하면 갱신.
+            if (isRenewal==null || isRenewal)
                 tokenMap = OauthUtility.renewalToken(jwtURL_kakao, tokenMap.get("refresh_Token"), clientID_kakao, client_secret_kakao);
-            //소셜 토큰을 만료시킨다
             userId = OauthUtility.doLogout(tokenMap.get("access_Token"), logoutURL_kakao).toString();
         }
         user = loginService.findByuserId(userId);
@@ -190,7 +187,6 @@ public class LoginController {
     @Transactional
     @GetMapping("/refresh_Token")
     public HashMap<String, String> check_Server_Refresh_Token(@RequestBody HashMap<String, String> tokenMap) throws Exception {
-        //받은 refresh_Token 검색
         User user = loginService.findByRefreshToken(tokenMap.get("refresh_Token"));
         if (user == null) {
             throw new LoginException();
@@ -198,12 +194,8 @@ public class LoginController {
 
         boolean isExpired = JwtUtility.isExpiredRefreshToken(tokenMap.get("refresh_Token"),refreshTokensecretKey);
         if(!isExpired) {
-            //1.서버 refresh_Token 유효할 경우 ,
-            ////1-1.서버 refresh_Token 으로 부터 claim datas(소셜 access_Token, 소셜 refresh_Token)을 얻는다.
-            ////1-2. 얻은 정보를 토대로 서버 access_Token을 만든다.
-            ////1-3. 서버에게 id , 서버 access_Token , 서버 refresh_Token 반환.
             HashMap <String, String> social_Token = JwtUtility.getClaimDataFromRefreshToken(tokenMap.get("refresh_Token"),refreshTokensecretKey);
-            if(user.getAuth().equals(Auth.비회원)) {//비회원이라면  social_Token에 key : id , value 추가
+            if(user.getAuth().equals(Auth.비회원)) {
                 social_Token.put("id",user.getUserId());
             }
             String new_access_Token = JwtUtility.makeJwtToken(accessTokenTime, social_Token, jwtsecretKey);
@@ -212,9 +204,6 @@ public class LoginController {
             return tokenMap;
         }
         else {
-            //2.서버 refresh_Token 무효할 경우
-            ////2-1. db에서 서버 refresh_Token을 null 로 만들고
-            ////2-2. 사용자에게 로그인 페이지 전달.
             user.setRefreshToken(null);
             em.persist(user);
             throw new LoginException();
