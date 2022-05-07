@@ -18,4 +18,13 @@ public class TagDto {
         this.tagOrder = tagOrder;
         this.tagName = tagName;
     }
+
+    @Override
+    public String toString() {
+        return "TagDto{" +
+                "linkCode=" + linkCode +
+                ", tagOrder=" + tagOrder +
+                ", tagName='" + tagName + '\'' +
+                '}';
+    }
 }
