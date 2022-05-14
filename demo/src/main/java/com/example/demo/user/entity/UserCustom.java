@@ -9,15 +9,16 @@ import lombok.NoArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 
 import javax.persistence.*;
+import java.io.Serializable;
 import java.time.LocalDateTime;
 
-@Data
+/*@Data
 @AllArgsConstructor
 @NoArgsConstructor
-@Entity(name = "usercustom")
-public class UserCustom{
+@Entity(name = "usercustom")*/
+public class UserCustom implements Serializable {
 
-    @Id
+/*    @Id
     @OneToOne
     @JoinColumn(name = "user_id")
     private User user;
@@ -26,6 +27,6 @@ public class UserCustom{
     private BackGround backGround;
 
     @DateTimeFormat(pattern = "HH:mm")
-    private LocalDateTime alarmTime;
+    private LocalDateTime alarmTime;*/
 
 }

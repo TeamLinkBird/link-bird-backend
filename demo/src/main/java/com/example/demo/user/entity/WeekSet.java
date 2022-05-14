@@ -11,15 +11,16 @@ import lombok.NoArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 
 import javax.persistence.*;
+import java.io.Serializable;
 import java.time.LocalDateTime;
 
-@Data
+/*@Data
 @AllArgsConstructor
 @NoArgsConstructor
-@Entity(name = "weekset")
-public class WeekSet {
+@Entity(name = "weekset")*/
+public class WeekSet implements Serializable {
 
-    @Id
+/*    @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long cd;
 
@@ -28,6 +29,6 @@ public class WeekSet {
     private User user;
 
     @Convert(converter = WeekConverter.class)
-    private Week week;
+    private Week week;*/
 
 }

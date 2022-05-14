@@ -9,14 +9,15 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import javax.persistence.*;
+import java.io.Serializable;
 
-@Data
+/*@Data
 @AllArgsConstructor
 @NoArgsConstructor
-@Entity(name = "linkset")
-public class LinkSet {
+@Entity(name = "linkset")*/
+public class LinkSet implements Serializable {
 
-    @Id
+/*    @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long cd;
 
@@ -26,6 +27,6 @@ public class LinkSet {
 
     @OneToOne
     @JoinColumn(name = "linkCode")
-    private Link link;
+    private Link link;*/
 
 }
