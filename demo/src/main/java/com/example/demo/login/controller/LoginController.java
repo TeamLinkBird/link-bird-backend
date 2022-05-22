@@ -5,23 +5,24 @@ import com.example.demo.common.commonenum.Social;
 import com.example.demo.common.commonenum.UserStatus;
 import com.example.demo.common.utility.JwtUtility;
 import com.example.demo.common.utility.OauthUtility;
+import com.example.demo.login.dto.SocialToken;
 import com.example.demo.login.entity.User;
 import com.example.demo.login.exception.LoginException;
 import com.example.demo.login.service.LoginService;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseToken;
 import io.jsonwebtoken.ExpiredJwtException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 import javax.servlet.http.HttpServletRequest;
 import java.util.HashMap;
+import java.util.Map;
 
 @Slf4j
 @RestController
@@ -69,6 +70,8 @@ public class LoginController {
     @Value("refreshTokensecretKey")
     String refreshTokensecretKey;
 
+    @Value("#{${socialUrlMap}}")
+    Map<String,String> socialUrlMap;
 
     @GetMapping("/")
     public String getDMainata(HttpServletRequest request) {
@@ -81,25 +84,27 @@ public class LoginController {
         throw new LoginException();
     }
 
+    //단말기 id 로 로그인
+    /*
+    * input : idMap ( id )
+    * output : dataMap ( 서버 access_Token , 서버 refresh_Token )
+    * */
     @Transactional
-    @GetMapping("/login/unsigned")
+    @PostMapping("/login/unsigned")
     public HashMap<String, String> unsignedLogin(@RequestBody HashMap<String, String> idMap){
-        //일단 클라이언트에서 보낸 서버토큰은 확실히 없다.
+        //디도스 방지로 중복 ip 시간 제한 두어야함
 
         HashMap<String, String> dataMap = new HashMap<>();
         String userId = idMap.get("id");
         if (userId == null) {
-            throw new NullPointerException("단말기에서 전송한 ID 데이터가 없습니다.");
+            throw new LoginException("단말기에서 전송한 ID 데이터가 없습니다.");
         }
 
         dataMap.put("id", userId);
         dataMap = JwtUtility.makeToken(accessTokenTime, refreshTokenTime, dataMap, jwtsecretKey, refreshTokensecretKey);
         User user = loginService.findByuserId(userId);
 
-        if (user != null) {
-            log.info("DB 에 단말기 정보 존재 : {}", userId);
-        }
-        else {
+        if (user == null) {
             log.info("DB 에 단말기 정보 존재 X : {}", userId);
             user = new User();
             user.setUserId(userId);
@@ -109,34 +114,41 @@ public class LoginController {
         }
         user.setRefreshToken(dataMap.get("refresh_Token"));
         em.persist(user);
+        dataMap.remove("id");
         return dataMap;
     }
 
+    // 소셜 로그인을 하는 사용자에게 서버 토큰을 반영
+    /*
+     * input : idToken
+     * output : idToken
+     * */
     @Transactional
-    @GetMapping("/login/kakao")
-    public HashMap<String, String> kakaoLogin(HttpServletRequest request) throws Exception {
-        HashMap<String, String> token;
+    @PostMapping("/login/google")
+    public HashMap<String, String> googleLogin(@RequestBody HashMap<String,String> idTokenMap) throws Exception {
         HashMap<String, String> serverToken;
-        HashMap<String, String> socialToken;
+        Social social_enum;
         String userId;
         User user;
+        String getUserUrl;
 
-        String authorize_code = request.getParameter("code");
-        log.info("authorize_code : {}",authorize_code);
-        token = OauthUtility.getToken(authorize_code, jwtURL_kakao, clientID_kakao, request.getRequestURL().toString(), client_secret_kakao);
-        log.info("소셜 token : {}",token);
-        socialToken = new HashMap<>(token);
-        userId = OauthUtility.getUserId(socialToken.get("access_Token"), userURL_kakao);
+        //id_Token 인증 및 uid 획득
+        FirebaseToken decodedToken = FirebaseAuth.getInstance().verifyIdToken(idTokenMap.get("idToken"));
+        userId = decodedToken.getUid();
+
+        //id 에 해당하는 db 정보 획득
         user = loginService.findByuserId(userId);
-        log.info("소셜 socialToken : {}",socialToken);
-        serverToken = JwtUtility.makeToken(accessTokenTime, refreshTokenTime, socialToken, jwtsecretKey, refreshTokensecretKey);
+        log.info("db 에서 가져온 사용자 정보 : {}",user);
+
+        idTokenMap.put("social_kind","google");
+        serverToken = JwtUtility.makeToken(accessTokenTime, refreshTokenTime, idTokenMap, jwtsecretKey, refreshTokensecretKey);
 
         if (user == null) {
             log.info("새롭게 계정 등록");
             user = new User();
             user.setUserId(userId);
             user.setAuth(Auth.소셜회원);
-            user.setSocial(Social.카카오);
+            user.setSocial(Social.구글);
             user.setUserStatus(UserStatus.활성화);
         }
         user.setRefreshToken(serverToken.get("refresh_Token"));
@@ -145,11 +157,64 @@ public class LoginController {
         return serverToken;
     }
 
+    // 소셜 로그인을 하는 사용자에게 서버 토큰을 반영
+    /*
+    * input : social_kind , socialToken( 소셜 access_Token , 소셜 refresh_Token )
+    * output : 서버 토큰 ( 서버 access_Token , 서버 refresh_Token )
+    * */
     @Transactional
-    @GetMapping("/login/naver")
-    public HashMap<String, String> naverLogin() {
-        log.info("ok");
-        return null;
+    @PostMapping("/login/{social}")
+    public HashMap<String, String> socialLogin(@PathVariable("social") String social_kind,@RequestBody SocialToken socialToken) throws Exception {
+        HashMap<String, String> serverToken;
+        HashMap<String, String> social_Token_map = new HashMap<>();
+        Social social_enum;
+        String userId;
+        User user;
+        String getUserUrl;
+
+        social_Token_map.put("access_Token",socialToken.getAccess_Token());
+        social_Token_map.put("refresh_Token",socialToken.getRefresh_Token());
+        social_Token_map.put("social_kind",social_kind);
+
+        //url 검사
+        if(Social.카카오.getValue().equals(social_kind)){
+            social_enum = Social.카카오;
+            getUserUrl = socialUrlMap.get("userURLkakao");
+        }
+        else if(Social.네이버.getValue().equals(social_kind)){
+            social_enum = Social.네이버;
+            throw new LoginException("옳바르지 않은 url 입니다");
+        }
+        else if(Social.구글.getValue().equals(social_kind)){
+            social_enum = Social.구글;
+            throw new LoginException("옳바르지 않은 url 입니다");
+        }
+        else if(Social.페이스북.getValue().equals(social_kind)){
+            social_enum = Social.페이스북;
+            throw new LoginException("옳바르지 않은 url 입니다");
+        }
+        else{
+            throw new LoginException("옳바르지 않은 url 입니다");
+        }
+
+        //유효성 검사 + id 획득
+        userId = OauthUtility.getUserId(socialToken.getAccess_Token(), getUserUrl);
+        user = loginService.findByuserId(userId);
+        log.info("소셜 socialToken : {}",socialToken);
+        serverToken = JwtUtility.makeToken(accessTokenTime, refreshTokenTime, social_Token_map, jwtsecretKey, refreshTokensecretKey);
+
+        if (user == null) {
+            log.info("새롭게 계정 등록");
+            user = new User();
+            user.setUserId(userId);
+            user.setAuth(Auth.소셜회원);
+            user.setSocial(social_enum);
+            user.setUserStatus(UserStatus.활성화);
+        }
+        user.setRefreshToken(serverToken.get("refresh_Token"));
+        log.info("refresh_Token : {}",serverToken.get("refresh_Token"));
+        em.persist(user);
+        return serverToken;
     }
 
     @Transactional
@@ -185,7 +250,7 @@ public class LoginController {
     }
 
     @Transactional
-    @GetMapping("/refresh_Token")
+    @PostMapping("/refresh_Token")
     public HashMap<String, String> check_Server_Refresh_Token(@RequestBody HashMap<String, String> tokenMap) throws Exception {
         User user = loginService.findByRefreshToken(tokenMap.get("refresh_Token"));
         if (user == null) {

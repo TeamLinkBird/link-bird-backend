@@ -1,7 +1,7 @@
 package com.example.demo.login.exception;
 
 import com.example.demo.login.controller.LoginController;
-import com.example.demo.login.controller.RefreshTokenController;
+import com.google.firebase.auth.FirebaseAuthException;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.SignatureException;
@@ -18,7 +18,7 @@ import java.io.IOException;
 import java.util.HashMap;
 
 @Slf4j
-@RestControllerAdvice(assignableTypes = {LoginController.class, RefreshTokenController.class})
+@RestControllerAdvice(assignableTypes = {LoginController.class})
 public class LoginExceptionController {
 
     @Value("${serverURI}")
@@ -29,8 +29,7 @@ public class LoginExceptionController {
         log.info("ExceptionHandler 수행");
         HashMap<String, String> errorMap = new HashMap<>();
         //옳바르지 않은 AccessToken , jwt 예외 case
-        if (ex instanceof IllegalArgumentException ||
-                ex instanceof IndexOutOfBoundsException ||
+        if (ex instanceof IndexOutOfBoundsException ||
                 ex instanceof NullPointerException ||
                 ex instanceof UnsupportedJwtException ||
                 ex instanceof MalformedJwtException ||
@@ -53,13 +52,44 @@ public class LoginExceptionController {
 
         //////////////////LoginException//////////////////
         else if (ex instanceof LoginException) {
-            errorMap.put("error","social refresh_Token의 만료이거나 그 외의 오류로 인하여 로그인 페이지로 이동합니다.");
+            if(ex.getMessage()!=null){
+                errorMap.put("error",ex.getMessage());
+            }
+            else {
+                errorMap.put("error", "social refresh_Token의 만료이거나 그 외의 오류로 인하여 로그인 페이지로 이동합니다.");
+            }
         }
+
+        //////////////////AccessUrlException//////////////////
+        else if (ex instanceof AccessUrlException) {
+            if(ex.getMessage()!=null){
+                errorMap.put("error",ex.getMessage());
+                errorMap.put("access_Token",(String)request.getAttribute("access_Token"));
+                errorMap.put("refresh_Token",(String)request.getAttribute("refresh_Token"));
+                return new ResponseEntity(errorMap,HttpStatus.OK);
+            }
+            else {
+                errorMap.put("error", "social refresh_Token의 만료이거나 그 외의 오류로 인하여 로그인 페이지로 이동합니다.");
+            }
+        }
+
+        //////////////////FIREBASE LOGIN - IllegalArgumentException//////////////////
+        else if (ex instanceof IllegalArgumentException) {
+                errorMap.put("error","토큰이 옳바르지 않거나 FirebaseApp instance 가 project ID 를 가지고 있지 않습니다.");
+        }
+
+        //////////////////FIREBASE LOGIN - FirebaseAuthException//////////////////
+        else if (ex instanceof FirebaseAuthException) {
+            errorMap.put("error","토큰의 파싱 혹은 유효성 검사동안 에러가 발생하였습니다.");
+        }
+
 
         //////////////////All Exception///////////////////
         else if (ex != null) {
             errorMap.put("error","오류 발생, 서버 관리자에게 문의하십시오.");
         }
+
+
         ex.printStackTrace();
         return new ResponseEntity(errorMap,HttpStatus.NOT_ACCEPTABLE);
     }

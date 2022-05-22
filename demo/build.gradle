@@ -34,7 +34,7 @@ dependencies {
 	implementation group: 'io.springfox', name: 'springfox-boot-starter', version: '3.0.0'
 	implementation group: 'org.jsoup', name: 'jsoup', version: '1.13.1'
 	testImplementation group: 'junit', name: 'junit', version: '4.12'
-
+	implementation 'com.google.firebase:firebase-admin:8.1.0'
 
 
 }

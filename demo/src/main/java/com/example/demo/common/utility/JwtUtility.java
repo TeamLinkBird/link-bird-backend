@@ -11,10 +11,15 @@ import java.util.HashMap;
 @Slf4j
 public class JwtUtility {
 
+    // 서버 access_Token 을 까서 2 Depth를 반환한다.
+    /*
+    *  input : request , jwt secret Key
+    *  output : 2 Depth dataMap ( id or 소셜 access_Token , 소셜 refresh_Token , social_kind )
+    * */
     public static HashMap<String, String> getSocialToken(HttpServletRequest request, String secretKey) throws Exception {
         HashMap<String, String> dataMap;
         String authorizationHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
-        dataMap = JwtUtility.getClaimData(authorizationHeader, secretKey, "access_Token", "refresh_Token", "id");
+        dataMap = JwtUtility.getClaimData(authorizationHeader, secretKey, "access_Token", "refresh_Token", "id","social_kind");
         return dataMap;
         //getClaimData 에서
         //parseToken 에서
@@ -24,52 +29,62 @@ public class JwtUtility {
         //NullPointerException
     }
 
-    //로컬 종합 토큰 생성후 반환
-    //input : 로컬 access,refresh Token 유효시간, dataMap(id or id,소셜 access_Token,소셜 refresh_Token), jwt암호화 할 시크릿 키
-    //output : tokenMap
+    //서버 종합 토큰 생성후 반환 22.5.19 목
+    //input : 서버 access,refresh Token 유효시간, dataMap(id or 소셜 access_Token,소셜 refresh_Token, social_kind), jwtsecretKey , refreshTokenSecretKey
+    //output : 서버 tokenMap
     public static HashMap<String, String> makeToken(
-            Long accessTokenTime, Long refreshTokenTime, HashMap<String, String> dataMap, String secretKey, String refreshTokensecretKey){
+            Long accessTokenTime, Long refreshTokenTime, HashMap<String, String> dataMap, String jwtsecretKey, String refreshTokensecretKey){
         HashMap<String, String> tokenMap = new HashMap<>();
 
-        String access_Token = makeJwtToken(accessTokenTime, dataMap, secretKey);
+        String jwt_Token = makeJwtToken(accessTokenTime, dataMap, jwtsecretKey);
         String refresh_Token = createRefreshToken(refreshTokenTime, dataMap, refreshTokensecretKey);
 
-        tokenMap.put("access_Token", access_Token);
-        tokenMap.put("refresh_Token", refresh_Token);
+        tokenMap.put("access_Token", jwt_Token); // 서버 access_Token
+        tokenMap.put("refresh_Token", refresh_Token); // 서버 refresh_Token
 
         return tokenMap;
     }
 
-    //로컬 access 토큰 생성후 반환
-    // input :   dataMap에 id 만 들어오거나  소셜accessToken,소셜refreshToken 들어오거나 둘 중하나
-    // output : 로컬 AccessToken
+    //서버 access 토큰 생성후 반환
+    // input :   accessTokenTime , dataMap( id or Social_Token, social_kind or  idToken , social_kind ) , jwtsecretKey
+    // output : server AccessToken
     public static String makeJwtToken(Long accessTokenTime, HashMap<String, String> dataMap, String secretKey) {
 
-        boolean flag = dataMap.get("access_Token") != null; // false: 비회원 로그인 인 경우 ( 고유 id만 담김 )
+        boolean flag = dataMap.get("social_kind") != null; // false: 비회원 로그인 인 경우 ( 고유 id만 담김 )
 
         Date expireTime = new Date(System.currentTimeMillis() + accessTokenTime);
         JwtBuilder jwtBuilder = Jwts.builder()
                 .setHeaderParam(Header.TYPE, Header.JWT_TYPE) // (1)
                 .setSubject("Valid")
-                .setIssuer("MrShin")
+                .setIssuer("linked")
                 .setIssuedAt(new Date())
                 .setExpiration(expireTime); // 만료 시간은 properties에 설정
         if (flag) { //소셜 토큰 정보가 있을 경우
-            jwtBuilder
-                    .claim("access_Token", dataMap.get("access_Token"))// 소셜 액세스 토큰
-                    .claim("refresh_Token", dataMap.get("refresh_Token")); // 소셜 리프레시 토큰
+            if(dataMap.get("social_kind").equals("google")){
+                jwtBuilder
+                        .claim("id_Token", dataMap.get("id_Token"))// id 토큰
+                        .claim("social_kind", dataMap.get("social_kind")); // 소셜 종류를 담는다.
+            }
+            else {
+                jwtBuilder
+                        .claim("access_Token", dataMap.get("access_Token"))// 소셜 액세스 토큰
+                        .claim("refresh_Token", dataMap.get("refresh_Token")) // 소셜 리프레시 토큰
+                        .claim("social_kind", dataMap.get("social_kind")); // 소셜 종류를 담는다.
+            }
         }
         else{   //비회원 로그인일 경우
             jwtBuilder
-                    .claim("id", dataMap.get("id"));// 비공개 클레임
-            log.info("dataMap.get(\"id\") : {}",dataMap.get("id"));
+                    .claim("id", dataMap.get("id"));// 단말기 id
         }
 
-
-        return jwtBuilder.signWith(SignatureAlgorithm.HS256, secretKey).compact(); // 서명부분  deprecated 되어 추후 변경 필요 있다.
+         return jwtBuilder.signWith(SignatureAlgorithm.HS256, secretKey).compact();
     }
 
-    //로컬 refresh 토큰 생성후 반환
+    //서버 refresh 토큰 생성후 반환
+    /*
+    * input : refreshTokenTime , social_Token( id or access_Token, refresh_Token , social_kind or id_Token ,social_kind ) ,refreshTokensecretKey
+    * output : 서버 refreshToken
+    * */
     private static String createRefreshToken(Long refreshTokenTime, HashMap<String, String> social_Token, String refreshTokensecretKey) {
 
         Date expireTime = new Date(System.currentTimeMillis() + refreshTokenTime);
@@ -80,12 +95,23 @@ public class JwtUtility {
                 .signWith(SignatureAlgorithm.HS256, refreshTokensecretKey)
                 .setExpiration(expireTime);
 
-        if(social_Token!=null){
-            String access_Token = social_Token.get("access_Token");
-            String refresh_Token = social_Token.get("refresh_Token");
+        if(social_Token.get("social_kind")!=null){  // 소셜 토큰이 존재 할 시
+            if(social_Token.get("social_kind").equals("google"))
+            {
+                jwtBuilder
+                        .claim("id_Token", social_Token.get("id_Token"))// id 토큰
+                        .claim("social_kind", social_Token.get("social_kind")); // 소셜 종류를 담는다.
+            }
+            else {
+                jwtBuilder
+                        .claim("access_Token", social_Token.get("access_Token"))// 소셜 액세스 토큰
+                        .claim("refresh_Token", social_Token.get("refresh_Token")) // 소셜 리프레시 토큰
+                        .claim("social_kind", social_Token.get("social_kind")); // 소셜 종류를 담는다.
+            }
+        }
+        else{ // 비회원 로그인 방식 일 시,
             jwtBuilder
-                    .claim("access_Token", access_Token)// 소셜 액세스 토큰
-                    .claim("refresh_Token", refresh_Token); // 소셜 리프레시 토큰
+                    .claim("id", social_Token.get("id"));//id
         }
 
         return jwtBuilder.compact();
@@ -197,7 +223,6 @@ public class JwtUtility {
         Claims claims = parseToken(authorizationHeader, secretKey);
 
         for (String key : keys) dataMap.put(key, (String) claims.get(key));
-
 
         return dataMap;
         //getClaimData 에서

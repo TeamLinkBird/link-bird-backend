@@ -3,6 +3,7 @@ package com.example.demo.interceptor;
 import com.example.demo.common.utility.JwtUtility;
 import com.example.demo.common.utility.OauthUtility;
 import com.example.demo.login.entity.User;
+import com.example.demo.login.exception.AccessUrlException;
 import com.example.demo.login.service.LoginService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +16,7 @@ import javax.persistence.PersistenceContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.util.HashMap;
+import java.util.Map;
 
 @Slf4j
 public class LoginInterceptor implements HandlerInterceptor {
@@ -25,60 +27,29 @@ public class LoginInterceptor implements HandlerInterceptor {
     @Autowired
     LoginService loginService;
 
-    @Value("${accessTokenTime}")
-    Long accessTokenTime;
+    @Value("#{${socialUrlMap}}")
+    Map<String,String> socialUrlMap;
 
-    @Value("${refreshTokenTime}")
-    Long refreshTokenTime;
+    @Value("#{${secretMap}}")
+    Map<String,String> secretMap;
 
-    @Value("${shortTimeAccessToken}")
-    Long shortTimeAccessToken;
+    @Value("#{${timeMap}}")
+    Map<String,Long> timeMap;
 
-    //oauth_refreshToken_Time 은 social 에서 정해져 있다.
-
-    @Value("${serverURI}")
-    String serverURI;
-
-    @Value("${tokeninfo.kakao}")
-    String tokeninfo_kakao;
-
-    @Value("${jwtURL.kakao}")
-    String jwtURL_kakao;
-
-    @Value("${userURL.kakao}")
-    String userURL_kakao;
-
-    @Value(("${logoutURL.kakao}"))
-    String kakaologout_URL;
-
-    @Value("${clientID.kakao}")
-    String clientID_kakao;
-
-    @Value("${clientSECRET.kakao}")
-    String client_secret_kakao;
-
-    @Value("${jwtsecretKey}")
-    String jwtsecretKey;
-
-    @Value("refreshTokensecretKey")
-    String refreshTokensecretKey;
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         log.info("request uri : {} ",request.getRequestURI());
         if(hasExcludeUrl(request.getRequestURI()))
             return false;
-        HashMap<String,String> dataMap = JwtUtility.getSocialToken(request,jwtsecretKey);
+        // 1 Depth -> 2 Depth
+        HashMap<String,String> dataMap = JwtUtility.getSocialToken(request,secretMap.get("jwtsecretKey"));
         String id = dataMap.get("id");
         log.info("id: {}",id);
         if(id == null) { // social 의 경우
-            HashMap<String ,Long> timeMap = new HashMap<>();
-            HashMap<String ,String> urlMap = new HashMap<>();
-            HashMap<String ,String> secretMap = new HashMap<>();
-            makeMap(timeMap, urlMap, secretMap);
-            HashMap<String ,String> socialToken;
-            socialToken = OauthUtility.checkSocialLogin(dataMap , timeMap ,urlMap , secretMap);
-            id = getSocialId(socialToken);
+            HashMap<String ,String> token;
+            token = OauthUtility.checkSocialLogin(dataMap , timeMap ,socialUrlMap , secretMap);
+            id = getSocialId(request, token);
         }
         request.setAttribute("id",id);
         return true;
@@ -89,29 +60,19 @@ public class LoginInterceptor implements HandlerInterceptor {
     }
 
     @Transactional
-    public String getSocialId(HashMap<String, String> socialToken){
-        String acesss_Token = socialToken.get("acesss_Token");
-        if(acesss_Token != null) {
-            String refresh_Token = socialToken.get("refresh_Token");
-            String id = socialToken.get("id");
+    public String getSocialId(HttpServletRequest request , HashMap<String, String> token) throws Exception{
+        String acesss_Token = token.get("acesss_Token");
+        if(acesss_Token != null) {//Token 에 access_Token 이 null이 아니라면 , 사용자에게 서버 access_Token , 서버 refresh_Token 전달하며 끝낸다.
+            String refresh_Token = token.get("refresh_Token");
+            String id = token.get("id");
             User user = loginService.findByuserId(id);
             user.setRefreshToken(refresh_Token);
             em.persist(user);
+            request.setAttribute("access_Token",acesss_Token);
+            request.setAttribute("refresh_Token",refresh_Token);
+            request.setAttribute("refresh_Token",refresh_Token);
+            throw new AccessUrlException("서버 access_Token , 서버 refresh_Token 을 갱신하여 사용자에게 전달합니다."); // http status 200 반환
         }
-        return socialToken.get("id");
-    }
-
-    public void makeMap(HashMap<String, Long> timeMap, HashMap<String, String> urlMap, HashMap<String, String> secretMap) {
-        timeMap.put("accessTokenTime", accessTokenTime);
-        timeMap.put("refreshTokenTime", refreshTokenTime);
-        timeMap.put("shortTimeAccessToken", shortTimeAccessToken);
-        urlMap.put("serverURI", serverURI);
-        urlMap.put("tokeninfo_kakao", tokeninfo_kakao);
-        urlMap.put("jwtURL_kakao", jwtURL_kakao);
-        urlMap.put("userURL_kakao", userURL_kakao);
-        secretMap.put("clientID_kakao", clientID_kakao);
-        secretMap.put("client_secret_kakao", client_secret_kakao);
-        secretMap.put("jwtsecretKey", jwtsecretKey);
-        secretMap.put("refreshTokensecretKey",refreshTokensecretKey);
+        return token.get("id");
     }
 }

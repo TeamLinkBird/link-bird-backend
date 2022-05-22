@@ -1,5 +1,7 @@
 package com.example.demo.common.utility;
 
+import com.example.demo.common.commonenum.Social;
+import com.example.demo.login.exception.LoginException;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import lombok.extern.slf4j.Slf4j;
@@ -8,42 +10,74 @@ import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.HashMap;
+import java.util.Map;
 
 @Slf4j
 public class OauthUtility {
 
+    /*
+    * input :   1. 2 Depth  socialTokenMap (  소셜 access_Token , 소셜 refresh_Token , social_kind )
+                2. timeMap ( application.properties time 정보 )
+                3. socialUrlMap ( application.properties social url 정보 )
+                4. secretMap ( application.properties sercert key 정보 )
+      output : 1. dataMap ( id , social_access_Token , social_refresh_Token , access_Token , refresh_Token (소셜 Access_Token 만료 됨)  or id (소셜 Access_Token 만료 안됨)
+    */
     public static HashMap<String ,String> checkSocialLogin
-            (HashMap<String,String> socialTokenMap , HashMap<String,Long> timeMap ,
-             HashMap<String,String> urlMap , HashMap<String,String> secretMap) throws Exception{
-
-        Long shortTimeAccessToken = timeMap.get("shortTimeAccessToken");
-        Long  accessTokenTime = timeMap.get("accessTokenTime");
-        Long refreshTokenTime = timeMap.get("refreshTokenTime");
-        String tokeninfo_kakao =  urlMap.get("tokeninfo_kakao");
-        String jwtURL_kakao = urlMap.get("jwtURL_kakao");
-        String userURL_kakao = urlMap.get("userURL_kakao");
-        String clientID_kakao = secretMap.get("clientID_kakao");
-        String client_secret_kakao = secretMap.get("client_secret_kakao");
-        String secretKey = secretMap.get("jwtsecretKey");
-        String refreshTokensecretKey = secretMap.get("refreshTokensecretKey");
+            (HashMap<String,String> socialTokenMap , Map<String,Long> timeMap ,
+             Map<String,String> urlMap , Map<String,String> secretMap) throws Exception{
 
         HashMap<String ,String> newSocialToken;
-        HashMap<String ,String> newLocalToken;
+        HashMap<String ,String> newServerToken;
         HashMap<String ,String> dataMap = new HashMap<>();
 
-        Boolean isExpired = OauthUtility.isAccessTokenTimeShort (socialTokenMap.get("access_Token") ,tokeninfo_kakao ,shortTimeAccessToken); //accessToken 만료여부 검사
+        Social social_enum;
+        String tokenInfoUrl;
+        String jwtUrl;
+        String getuserUrl;
+        String clientId;
+        String clientpw;
+
+        String social_kind = socialTokenMap.get("social_kind");
+
+        //url 검사
+        if(Social.카카오.getValue().equals(social_kind)){
+            social_enum = Social.카카오;
+            tokenInfoUrl = urlMap.get("tokeninfokakao");
+            jwtUrl = urlMap.get("jwtURLkakao");
+            getuserUrl = urlMap.get("userURLkakao");
+            clientId = secretMap.get("clientIDkakao");
+            clientpw = secretMap.get("clientSECRETkakao");
+        }
+        else if(Social.네이버.getValue().equals(social_kind)){
+            social_enum = Social.네이버;
+            throw new LoginException("옳바르지 않은 url 입니다");
+        }
+        else if(Social.구글.getValue().equals(social_kind)){
+            social_enum = Social.구글;
+            throw new LoginException("옳바르지 않은 url 입니다");
+        }
+        else if(Social.페이스북.getValue().equals(social_kind)){
+            social_enum = Social.페이스북;
+            throw new LoginException("옳바르지 않은 url 입니다");
+        }
+        else{
+            throw new LoginException("옳바르지 않은 url 입니다");
+        }
+
+        Boolean isExpired = OauthUtility.isAccessTokenTimeShort (socialTokenMap.get("access_Token") ,tokenInfoUrl ,timeMap.get("shortTimeAccessToken")); //소셜 accessToken 만료여부 검사
         String id;
-        if(isExpired==null || isExpired) { //소셜 Access_Token 만료 됨
-            newSocialToken = OauthUtility.renewalToken(jwtURL_kakao, socialTokenMap.get("refresh_Token"), clientID_kakao, client_secret_kakao);
-            newLocalToken = JwtUtility.makeToken(accessTokenTime, refreshTokenTime, newSocialToken, secretKey, refreshTokensecretKey);
-            id = OauthUtility.getUserId(newSocialToken.get("access_Token"),userURL_kakao);
+        if(isExpired) { //소셜 Access_Token 만료 되었거나 만료기준에 적합함
+            newSocialToken = OauthUtility.renewalToken(jwtUrl, socialTokenMap.get("refresh_Token"), clientId, clientpw);
+            newSocialToken.put("social_kind",social_enum.getValue()); // social_kind 담기
+            newServerToken = JwtUtility.makeToken(timeMap.get("accessTokenTime"), timeMap.get("refreshTokenTime"), newSocialToken, secretMap.get("jwtsecretKey"), secretMap.get("refreshTokensecretKey"));
+            id = OauthUtility.getUserId(newSocialToken.get("access_Token"),getuserUrl);
             dataMap.put("social_access_Token",newSocialToken.get("social_access_Token"));
             dataMap.put("social_refresh_Token",newSocialToken.get("social_refresh_Token"));
-            dataMap.put("access_Token",newLocalToken.get("access_Token"));
-            dataMap.put("refresh_Token",newLocalToken.get("refresh_Token"));
+            dataMap.put("access_Token",newServerToken.get("access_Token"));
+            dataMap.put("refresh_Token",newServerToken.get("refresh_Token"));
         }
         else{//소셜 Access_Token 만료 안됨
-            id = OauthUtility.getUserId(socialTokenMap.get("access_Token"),userURL_kakao);
+            id = OauthUtility.getUserId(socialTokenMap.get("access_Token"),getuserUrl);
         }
         dataMap.put("id",id);
         return dataMap;
@@ -99,7 +133,11 @@ public class OauthUtility {
         return map;
     }
 
-    //Social 토큰 갱신 ( refresh Token 유효기간 좀 남아 있으면 refresh Token 은 갱신 안함 )
+    //Social 토큰 갱신 ( refresh Token 유효기간 좀 남아 있으면 refresh Token 은 갱신 안함 <카톡기준>)
+    /*
+    * input : jwtUrl ( access_Token 갱신하는 url ) , 소셜 refresh_Token , clientId , clientpw
+    * output : HashMap ( 소셜 access_Token , 소셜 refresh_Token )
+    * */
     public static HashMap<String, String> renewalToken(String jwtURL, String refresh_Token, String clientID, String
             client_secret) throws Exception {
         HashMap<String, String> map = new HashMap<>();
@@ -134,13 +172,13 @@ public class OauthUtility {
         while ((line = br.readLine()) != null) {
             result.append(line);
         }
-        log.info("response body : {}", result.toString());
+        log.info("response body : {}", result);
 
         //    Gson 라이브러리에 포함된 클래스로 JSON파싱 객체 생성
         JsonParser parser = new JsonParser();
         JsonElement element = parser.parse(result.toString());
 
-        //refresh 토큰 갱신 안되면 null 반환 ( 1개월 이상 남으면 노갱신 )
+        //refresh 토큰 갱신 안되면 null 반환 ( 1개월 이상 남으면 노갱신 <카카오기준>)
         JsonElement tmp = element.getAsJsonObject().get("refresh_token");
         refresh_Token = (tmp == null) ? refresh_Token : tmp.getAsString();
 
@@ -154,13 +192,17 @@ public class OauthUtility {
     }
 
     //Social 유저 정보를 얻어옴
+    /*
+    * input : 소셜 access_Token , getuserUrl
+    * output : 문자열 social 고유 id
+    * */
     public static String getUserId(String access_Token, String userURL) throws Exception {
-        String id = null;
+        String id ;
         URL url = new URL(userURL);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.setRequestMethod("POST");
 
-        //    요청에 필요한 Header에 포함될 내용
+        //요청에 필요한 Header에 포함될 내용
         conn.setRequestProperty("Authorization", "Bearer " + access_Token);
 
         int responseCode = conn.getResponseCode(); // IOException
@@ -180,18 +222,21 @@ public class OauthUtility {
         JsonElement element = parser.parse(result.toString());
 
         long longId = element.getAsJsonObject().get("id").getAsLong();
-        id = Long.toString(longId);
-
+        id = String.valueOf(longId);
 
         return id;
     }
 
+
     //Social accessToken 유효기간이 짧은가 검사  ,  짧으면 true , 길면 false
-    public static Boolean isAccessTokenTimeShort(String access_Token, String tokeninfokakao,
+    /*
+    * input : 소셜 access_Token ,소셜 tokeninfoUrl , 기준시간인 shortTimeAccessToken
+    * output : 만료되었거나 짧으면 true , 유효하면 false
+    * */
+    public static Boolean isAccessTokenTimeShort(String access_Token, String tokeninfoUrl,
                                                  Long shortTimeAccessToken) throws Exception {
-        // 요청하는 클라이언트마다 가진 정보가 다를 수 있기에 HashMap타입으로 선언
         boolean isRenewal;
-        URL url = new URL(tokeninfokakao);
+        URL url = new URL(tokeninfoUrl);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.setRequestMethod("GET");
 
@@ -203,7 +248,7 @@ public class OauthUtility {
 
         if (responseCode == 400) {
             log.info("카카오 플랫폼 서비스의 일시적 내부 장애 상태 이거나 액세스 토큰 정보가 옳바르지 않습니다.");
-            return null;
+            throw new LoginException("카카오 플랫폼 서비스의 일시적 내부 장애 상태 이거나 액세스 토큰 정보가 옳바르지 않습니다.");
         } else if (responseCode == 401) {
             log.info("유효하지 않은 앱키나 액세스 토큰으로 요청한 경우이거나 \n" +
                     "토큰 값이 잘못되었거나 만료되어 유효하지 않은 경우로 토큰 갱신 필요한 상태입니다.");
