@@ -12,6 +12,8 @@ import com.example.demo.login.service.LoginService;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseToken;
 import io.jsonwebtoken.ExpiredJwtException;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -24,6 +26,7 @@ import javax.servlet.http.HttpServletRequest;
 import java.util.HashMap;
 import java.util.Map;
 
+@Tag(name = "login", description = "Login 관련 APi")
 @Slf4j
 @RestController
 public class LoginController {
@@ -73,12 +76,7 @@ public class LoginController {
     @Value("#{${socialUrlMap}}")
     Map<String,String> socialUrlMap;
 
-    @GetMapping("/")
-    public String getDMainata(HttpServletRequest request) {
-        log.info("id : {}", request.getAttribute("id"));
-        return "ok";
-    }
-
+    @Operation(tags = "login", summary = "로그인 정보를 사용자에게 전달", description = "")
     @GetMapping("/login")
     public HashMap<String, String> login() throws Exception{
         throw new LoginException();
@@ -89,6 +87,7 @@ public class LoginController {
     * input : idMap ( id )
     * output : dataMap ( 서버 access_Token , 서버 refresh_Token )
     * */
+    @Operation(tags = "login", summary = "비회원 로그인", description = "")
     @Transactional
     @PostMapping("/login/unsigned")
     public HashMap<String, String> unsignedLogin(@RequestBody HashMap<String, String> idMap){
@@ -123,6 +122,7 @@ public class LoginController {
      * input : idToken
      * output : idToken
      * */
+    @Operation(tags = "login", summary = "구글 로그인", description = "")
     @Transactional
     @PostMapping("/login/google")
     public HashMap<String, String> googleLogin(@RequestBody HashMap<String,String> idTokenMap) throws Exception {
@@ -162,6 +162,7 @@ public class LoginController {
     * input : social_kind , socialToken( 소셜 access_Token , 소셜 refresh_Token )
     * output : 서버 토큰 ( 서버 access_Token , 서버 refresh_Token )
     * */
+    @Operation(tags = "login", summary = "구글 이외의 소셜 로그인", description = "")
     @Transactional
     @PostMapping("/login/{social}")
     public HashMap<String, String> socialLogin(@PathVariable("social") String social_kind,@RequestBody SocialToken socialToken) throws Exception {
@@ -217,6 +218,7 @@ public class LoginController {
         return serverToken;
     }
 
+    @Operation(tags = "login", summary = "소셜 로그아웃 (카카오만 구현)", description = "")
     @Transactional
     @PostMapping("/logout")
     public HashMap<String, String> logout(HttpServletRequest request) throws Exception {
@@ -249,6 +251,7 @@ public class LoginController {
         throw new LoginException();
     }
 
+    @Operation(tags = "login", summary = "서버 refresh_Token 을 받고 갱신된 access_Token , refresh_Token을 내보냄", description = "")
     @Transactional
     @PostMapping("/refresh_Token")
     public HashMap<String, String> check_Server_Refresh_Token(@RequestBody HashMap<String, String> tokenMap) throws Exception {
