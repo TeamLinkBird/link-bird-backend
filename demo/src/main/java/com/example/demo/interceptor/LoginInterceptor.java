@@ -70,7 +70,6 @@ public class LoginInterceptor implements HandlerInterceptor {
             em.persist(user);
             request.setAttribute("access_Token",acesss_Token);
             request.setAttribute("refresh_Token",refresh_Token);
-            request.setAttribute("refresh_Token",refresh_Token);
             throw new AccessUrlException("서버 access_Token , 서버 refresh_Token 을 갱신하여 사용자에게 전달합니다."); // http status 200 반환
         }
         return token.get("id");

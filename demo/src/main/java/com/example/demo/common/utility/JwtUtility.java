@@ -19,7 +19,7 @@ public class JwtUtility {
     public static HashMap<String, String> getSocialToken(HttpServletRequest request, String secretKey) throws Exception {
         HashMap<String, String> dataMap;
         String authorizationHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
-        dataMap = JwtUtility.getClaimData(authorizationHeader, secretKey, "access_Token", "refresh_Token", "id","social_kind");
+        dataMap = JwtUtility.getClaimData(authorizationHeader, secretKey, "access_Token", "refresh_Token", "id","social_kind","id_Token");
         return dataMap;
         //getClaimData 에서
         //parseToken 에서

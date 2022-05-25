@@ -2,6 +2,8 @@ package com.example.demo.common.utility;
 
 import com.example.demo.common.commonenum.Social;
 import com.example.demo.login.exception.LoginException;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseToken;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import lombok.extern.slf4j.Slf4j;
@@ -20,7 +22,7 @@ public class OauthUtility {
                 2. timeMap ( application.properties time 정보 )
                 3. socialUrlMap ( application.properties social url 정보 )
                 4. secretMap ( application.properties sercert key 정보 )
-      output : 1. dataMap ( id , social_access_Token , social_refresh_Token , access_Token , refresh_Token (소셜 Access_Token 만료 됨)  or id (소셜 Access_Token 만료 안됨)
+      output : 1. dataMap ( id  , 서버 access_Token , 서버 refresh_Token (소셜 Access_Token 만료 됨)  or id (소셜 Access_Token 만료 안됨 or 구글 id_Token 만료 안됨) )
     */
     public static HashMap<String ,String> checkSocialLogin
             (HashMap<String,String> socialTokenMap , Map<String,Long> timeMap ,
@@ -31,11 +33,11 @@ public class OauthUtility {
         HashMap<String ,String> dataMap = new HashMap<>();
 
         Social social_enum;
-        String tokenInfoUrl;
-        String jwtUrl;
-        String getuserUrl;
-        String clientId;
-        String clientpw;
+        String tokenInfoUrl = null;
+        String jwtUrl = null;
+        String getuserUrl = null;
+        String clientId = null;
+        String clientpw = null;
 
         String social_kind = socialTokenMap.get("social_kind");
 
@@ -54,7 +56,6 @@ public class OauthUtility {
         }
         else if(Social.구글.getValue().equals(social_kind)){
             social_enum = Social.구글;
-            throw new LoginException("옳바르지 않은 url 입니다");
         }
         else if(Social.페이스북.getValue().equals(social_kind)){
             social_enum = Social.페이스북;
@@ -64,15 +65,28 @@ public class OauthUtility {
             throw new LoginException("옳바르지 않은 url 입니다");
         }
 
-        Boolean isExpired = OauthUtility.isAccessTokenTimeShort (socialTokenMap.get("access_Token") ,tokenInfoUrl ,timeMap.get("shortTimeAccessToken")); //소셜 accessToken 만료여부 검사
+        Boolean isExpired = true;
         String id;
+        if(social_enum!=Social.구글) {
+            isExpired = OauthUtility.isAccessTokenTimeShort(socialTokenMap.get("access_Token"), tokenInfoUrl, timeMap.get("shortTimeAccessToken")); //소셜 accessToken 만료여부 검사
+        }
+        else{
+            /*
+            1.id_Token 이 만료되었는지 안되었는지 확인
+            1.1 id_Token 이 휴효하면 dataMap에 id 담고 반환 끝.
+            1.2 id_Token 이 만료되었다면 클라이언트에게 재 로그인 요청 ( 예외로 처리 )
+            * */
+            FirebaseToken decodedToken = FirebaseAuth.getInstance().verifyIdToken(socialTokenMap.get("id_Token"));
+            id = decodedToken.getUid();
+            dataMap.put("id",id);
+            return dataMap;
+        }
+
         if(isExpired) { //소셜 Access_Token 만료 되었거나 만료기준에 적합함
             newSocialToken = OauthUtility.renewalToken(jwtUrl, socialTokenMap.get("refresh_Token"), clientId, clientpw);
             newSocialToken.put("social_kind",social_enum.getValue()); // social_kind 담기
             newServerToken = JwtUtility.makeToken(timeMap.get("accessTokenTime"), timeMap.get("refreshTokenTime"), newSocialToken, secretMap.get("jwtsecretKey"), secretMap.get("refreshTokensecretKey"));
             id = OauthUtility.getUserId(newSocialToken.get("access_Token"),getuserUrl);
-            dataMap.put("social_access_Token",newSocialToken.get("social_access_Token"));
-            dataMap.put("social_refresh_Token",newSocialToken.get("social_refresh_Token"));
             dataMap.put("access_Token",newServerToken.get("access_Token"));
             dataMap.put("refresh_Token",newServerToken.get("refresh_Token"));
         }

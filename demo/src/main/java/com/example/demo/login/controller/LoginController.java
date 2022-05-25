@@ -17,6 +17,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
@@ -75,12 +77,6 @@ public class LoginController {
 
     @Value("#{${socialUrlMap}}")
     Map<String,String> socialUrlMap;
-
-    @Operation(tags = "login", summary = "로그인 정보를 사용자에게 전달", description = "")
-    @GetMapping("/login")
-    public HashMap<String, String> login() throws Exception{
-        throw new LoginException();
-    }
 
     //단말기 id 로 로그인
     /*
@@ -221,7 +217,7 @@ public class LoginController {
     @Operation(tags = "login", summary = "소셜 로그아웃 (카카오만 구현)", description = "")
     @Transactional
     @PostMapping("/logout")
-    public HashMap<String, String> logout(HttpServletRequest request) throws Exception {
+    public ResponseEntity logout(HttpServletRequest request) throws Exception {
 
         HashMap<String, String> tokenMap;
         String header = request.getHeader("Authorization");
@@ -229,15 +225,15 @@ public class LoginController {
         try {
             tokenMap = JwtUtility.getClaimData(header, jwtsecretKey, "access_Token", "refresh_Token", "id");
         }catch(ExpiredJwtException e){
-            log.info("서버의 access_Token 이 만료 되었으므로 login 페이지정보 전달");
-            throw new LoginException();
+            log.info("서버의 access_Token 이 만료 되었으므로 로그인 예외 발생");
+            throw new LoginException("서버의 access_Token 이 만료 되었으므로 로그인 예외 발생");
         }
 
         String userId = tokenMap.get("id");
         User user;
         if (userId == null) {
             Boolean isRenewal = OauthUtility.isAccessTokenTimeShort(tokenMap.get("access_Token"), tokeninfo_kakao, shortTimeAccessToken);
-            if (isRenewal==null || isRenewal)
+            if (isRenewal)
                 tokenMap = OauthUtility.renewalToken(jwtURL_kakao, tokenMap.get("refresh_Token"), clientID_kakao, client_secret_kakao);
             userId = OauthUtility.doLogout(tokenMap.get("access_Token"), logoutURL_kakao).toString();
         }
@@ -248,10 +244,10 @@ public class LoginController {
             user.setRefreshToken(null);
             em.persist(user);
         }
-        throw new LoginException();
+        return new ResponseEntity(HttpStatus.OK);
     }
 
-    @Operation(tags = "login", summary = "서버 refresh_Token 을 받고 갱신된 access_Token , refresh_Token을 내보냄", description = "")
+    @Operation(tags = "login", summary = "서버 refresh_Token 을 받고 갱신된 access_Token , refresh_Token 을 내보냄", description = "")
     @Transactional
     @PostMapping("/refresh_Token")
     public HashMap<String, String> check_Server_Refresh_Token(@RequestBody HashMap<String, String> tokenMap) throws Exception {
@@ -274,7 +270,7 @@ public class LoginController {
         else {
             user.setRefreshToken(null);
             em.persist(user);
-            throw new LoginException();
+            throw new LoginException("서버 refresh_Token 만료. 재 로그인 해주세요");
         }
     }
 }
