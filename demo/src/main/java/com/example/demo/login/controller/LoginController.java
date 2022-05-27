@@ -158,7 +158,7 @@ public class LoginController {
     * input : social_kind , socialToken( 소셜 access_Token , 소셜 refresh_Token )
     * output : 서버 토큰 ( 서버 access_Token , 서버 refresh_Token )
     * */
-    @Operation(tags = "login", summary = "구글 이외의 소셜 로그인", description = "input : 소셜 access_Token , 소셜 refresh_Token , output : 서버 access_Token, 서버 refresh_Token")
+    @Operation(tags = "login", summary = "구글 이외의 소셜 로그인", description = "input : json 형태 {\"access_Token\": 소셜엑세스토큰,\"refresh_Token\": 소셜 리프레쉬토큰} , output : 서버 access_Token, 서버 refresh_Token")
     @Transactional
     @PostMapping("/login/{social}")
     public HashMap<String, String> socialLogin(@PathVariable("social") String social_kind,@RequestBody SocialToken socialToken) throws Exception {
@@ -247,7 +247,7 @@ public class LoginController {
         return new ResponseEntity(HttpStatus.OK);
     }
 
-    @Operation(tags = "login", summary = "서버 refresh_Token 을 받고 갱신된 access_Token , refresh_Token 을 내보냄", description = "")
+    @Operation(tags = "login", summary = "서버 refresh_Token 을 받고 갱신된 access_Token , refresh_Token 을 내보냄", description = "input : json 형태 {\"refresh_Token\": 서버 리프레쉬토큰 } , output : 서버 access_Token, 서버 refresh_Token")
     @Transactional
     @PostMapping("/refresh_Token")
     public HashMap<String, String> check_Server_Refresh_Token(@RequestBody HashMap<String, String> tokenMap) throws Exception {
