@@ -83,7 +83,7 @@ public class LoginController {
     * input : idMap ( id )
     * output : dataMap ( 서버 access_Token , 서버 refresh_Token )
     * */
-    @Operation(tags = "login", summary = "비회원 로그인", description = "")
+    @Operation(tags = "login", summary = "비회원 로그인", description = "input : json 형태 {\"id\": 단말기id} output : 서버 access_Token , 서버 refresh_Token ")
     @Transactional
     @PostMapping("/login/unsigned")
     public HashMap<String, String> unsignedLogin(@RequestBody HashMap<String, String> idMap){
@@ -118,7 +118,7 @@ public class LoginController {
      * input : idToken
      * output : idToken
      * */
-    @Operation(tags = "login", summary = "구글 로그인", description = "")
+    @Operation(tags = "login", summary = "구글 로그인", description = "미사용")
     @Transactional
     @PostMapping("/login/google")
     public HashMap<String, String> googleLogin(@RequestBody HashMap<String,String> idTokenMap) throws Exception {
@@ -158,7 +158,7 @@ public class LoginController {
     * input : social_kind , socialToken( 소셜 access_Token , 소셜 refresh_Token )
     * output : 서버 토큰 ( 서버 access_Token , 서버 refresh_Token )
     * */
-    @Operation(tags = "login", summary = "구글 이외의 소셜 로그인", description = "")
+    @Operation(tags = "login", summary = "구글 이외의 소셜 로그인", description = "input : 소셜 access_Token , 소셜 refresh_Token , output : 서버 access_Token, 서버 refresh_Token")
     @Transactional
     @PostMapping("/login/{social}")
     public HashMap<String, String> socialLogin(@PathVariable("social") String social_kind,@RequestBody SocialToken socialToken) throws Exception {
@@ -214,7 +214,7 @@ public class LoginController {
         return serverToken;
     }
 
-    @Operation(tags = "login", summary = "소셜 로그아웃 (카카오만 구현)", description = "")
+    @Operation(tags = "login", summary = "소셜 로그아웃 (카카오만 구현)", description = "header 부분에 Authorization 형식으로 Bearer : 엑세스토큰 전달")
     @Transactional
     @PostMapping("/logout")
     public ResponseEntity logout(HttpServletRequest request) throws Exception {
