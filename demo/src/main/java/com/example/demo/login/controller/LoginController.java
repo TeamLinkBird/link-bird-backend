@@ -78,6 +78,16 @@ public class LoginController {
     @Value("#{${socialUrlMap}}")
     Map<String,String> socialUrlMap;
 
+
+    @Operation(tags = "login", summary = "test 기능" , description = "header 부분에 Authorization 형식으로 Bearer : 엑세스토큰 전달 , output :  확인된 id 값과 , http status 200")
+    @GetMapping("/test")
+    public ResponseEntity<HashMap<String,String>> getDMainata(HttpServletRequest request) {
+        HashMap<String,String> testMap = new HashMap<>();
+        testMap.put("id",(String)request.getAttribute("id"));
+        log.info("id : {}", request.getAttribute("id"));
+        return new ResponseEntity(testMap,HttpStatus.OK);
+    }
+
     //단말기 id 로 로그인
     /*
     * input : idMap ( id )
