@@ -215,7 +215,11 @@ public class JwtUtility {
         return social_Token;
     }
 
-    // authorizationHeader 로부터 HashMap 데이터 획득
+    // authorizationHeader 로부터 2 Depth 획득 ( social 토큰 , social_kind or 단말기id 등  )
+    /*
+    * input : Bearer 가 포함된 헤더 , jwtsecretkey , keys( access_Token, refresh_Token, social_kind, id etc.. )
+    * output : HashMap(소셜 access_Token, 소셜 refresh_Token, social_kind or 단말기 id)
+    * */
     public static HashMap<String, String> getClaimData(String authorizationHeader, String secretKey, String... keys) {
 
         HashMap<String, String> dataMap = new HashMap<>();

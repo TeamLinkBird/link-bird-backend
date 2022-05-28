@@ -214,7 +214,7 @@ public class LoginController {
         return serverToken;
     }
 
-    @Operation(tags = "login", summary = "소셜 로그아웃 (카카오만 구현)", description = "header 부분에 Authorization 형식으로 Bearer : 엑세스토큰 전달")
+   /* @Operation(tags = "login", summary = "로그아웃(회원, 비회원 공통)", description = "header 부분에 Authorization 형식으로 Bearer : 엑세스토큰 전달")
     @Transactional
     @PostMapping("/logout")
     public ResponseEntity logout(HttpServletRequest request) throws Exception {
@@ -231,7 +231,7 @@ public class LoginController {
 
         String userId = tokenMap.get("id");
         User user;
-        if (userId == null) {
+        if (userId == null) { // 소셜의 경우
             Boolean isRenewal = OauthUtility.isAccessTokenTimeShort(tokenMap.get("access_Token"), tokeninfo_kakao, shortTimeAccessToken);
             if (isRenewal)
                 tokenMap = OauthUtility.renewalToken(jwtURL_kakao, tokenMap.get("refresh_Token"), clientID_kakao, client_secret_kakao);
@@ -245,7 +245,7 @@ public class LoginController {
             em.persist(user);
         }
         return new ResponseEntity(HttpStatus.OK);
-    }
+    }*/
 
     @Operation(tags = "login", summary = "서버 refresh_Token 을 받고 갱신된 access_Token , refresh_Token 을 내보냄", description = "input : json 형태 {\"refresh_Token\": 서버 리프레쉬토큰 } , output : 서버 access_Token, 서버 refresh_Token")
     @Transactional
